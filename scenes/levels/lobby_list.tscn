@@ -181,7 +181,7 @@ script/source = "extends ColorRect
 
 signal submit_host;
 
-const MAX_PLAYER = 12;
+const MAX_PLAYER = 8;
 const MIN_PLAYER = 2;
 
 @export var host_manager: HostManager;

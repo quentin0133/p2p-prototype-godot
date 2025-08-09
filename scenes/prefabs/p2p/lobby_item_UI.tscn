@@ -39,7 +39,7 @@ layout_mode = 2
 size_flags_vertical = 4
 
 [node name="PrivateIcon" type="TextureRect" parent="ColorRect/MarginContainer/HBoxContainer/PlayersGroup"]
-custom_minimum_size = Vector2(40, 20)
+custom_minimum_size = Vector2(30, 20)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -52,7 +52,7 @@ metadata/_edit_use_anchors_ = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
-text = "1/8"
+text = "0/8"
 horizontal_alignment = 1
 vertical_alignment = 1
 
