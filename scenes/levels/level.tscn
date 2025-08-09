@@ -1,0 +1,159 @@
+[gd_scene load_steps=12 format=4 uid="uid://dnogk42e57rih"]
+
+[ext_resource type="Texture2D" uid="uid://cd217gceq51kl" path="res://assets/tileset/Sprite-0004.png" id="1_377w7"]
+[ext_resource type="PackedScene" uid="uid://dfh2a3h6t0mr2" path="res://scenes/prefabs/player.tscn" id="1_bovvr"]
+[ext_resource type="PackedScene" uid="uid://bqs0y8wqyxvyo" path="res://scenes/prefabs/character.tscn" id="2_b2cq8"]
+[ext_resource type="Script" uid="uid://bxuonqhaq0jii" path="res://scripts/player/chat.gd" id="4_xb4v1"]
+[ext_resource type="Script" uid="uid://k0vit4nwydg2" path="res://scenes/levels/bubble_manager.gd" id="5_d4w6o"]
+[ext_resource type="FontFile" uid="uid://t30ga4c5n0aw" path="res://assets/font/PixelifySans-VariableFont_wght.ttf" id="5_urvlt"]
+[ext_resource type="PackedScene" uid="uid://enapc4vqmp52" path="res://scenes/prefabs/bubble_chat.tscn" id="6_d4w6o"]
+
+[sub_resource type="GDScript" id="GDScript_bovvr"]
+resource_name = "level_manager"
+script/source = "extends Node2D
+
+signal players_ready(players: Array[PlayerInstance]);
+
+@export var main_player: PackedScene
+@export var other_player: PackedScene
+
+var players: Array[PlayerInstance] = [];
+
+func _ready():
+	multiplayer.peer_connected.connect(_on_peer_connected);
+	multiplayer.peer_disconnected.connect(_on_peer_disconnected);
+	
+	spawn_player(main_player, multiplayer.get_unique_id());
+	for peer_id in multiplayer.get_peers():
+		spawn_player(other_player, peer_id);
+	players_ready.emit(players);
+
+func spawn_player(player_scene: PackedScene, peer_id: int):
+	var player = player_scene.instantiate() as PlayerInstance;
+
+	# Assigner l'autorité (c'est super important !)
+	player.set_multiplayer_authority(peer_id)
+	var username;
+	if (GameManager.players.size() > 0):
+		username = GameManager.players[peer_id].name;
+	else:
+		username = \"Username\";
+	
+	player.username_label.text = username;
+	
+	# Position de spawn random pour éviter les overlaps
+	player.global_position = Vector2.ZERO;
+	
+	player.name = \"Player_%d\" % peer_id;
+	players.append(player);
+	
+	add_child(player)
+
+func _on_peer_connected(id):
+	print(\"Peer connected: \", id)
+	spawn_player(other_player, id);
+
+func _on_peer_disconnected(id):
+	print(\"Peer disconnected: \", id)
+	for player in players:
+		if player.get_multiplayer_authority() == id:
+			player.queue_free()
+			GameManager.players.erase(id)
+	print(\"Players remaining : \", GameManager.players)
+
+func _on_canvas_layer_on_message_sended(peer_id: int, message: String) -> void:
+	var player_instance = players.filter(func(p: PlayerInstance): return p.get_multiplayer_authority() == peer_id)[0];
+	player_instance.broadcast_message(message);
+"
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_b2cq8"]
+friction = 0.5
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_bovvr"]
+texture = ExtResource("1_377w7")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+0:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-16, -8.41078, 16, -8.41078, 16, 16, -16, 16)
+1:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_b2cq8"]
+tile_size = Vector2i(32, 32)
+physics_layer_0/collision_layer = 2
+physics_layer_0/collision_mask = 2
+physics_layer_0/physics_material = SubResource("PhysicsMaterial_b2cq8")
+sources/0 = SubResource("TileSetAtlasSource_bovvr")
+
+[node name="Level" type="Node2D"]
+y_sort_enabled = true
+script = SubResource("GDScript_bovvr")
+main_player = ExtResource("1_bovvr")
+other_player = ExtResource("2_b2cq8")
+
+[node name="Ground" type="TileMapLayer" parent="."]
+z_index = -25
+position = Vector2(-81, -39)
+tile_map_data = PackedByteArray("AAD8//7/AAABAAAAAAD8////AAABAAAAAAD8/wAAAAABAAAAAAD8/wEAAAABAAAAAAD8/wIAAAABAAAAAAD9//7/AAABAAAAAAD9////AAABAAAAAAD9/wAAAAABAAAAAAD9/wEAAAABAAAAAAD9/wIAAAABAAAAAAD+//7/AAABAAAAAAD+////AAABAAAAAAD+/wAAAAABAAAAAAD+/wEAAAABAAAAAAD+/wIAAAABAAAAAAD///7/AAABAAAAAAD/////AAABAAAAAAD//wAAAAABAAAAAAD//wEAAAABAAAAAAD//wIAAAABAAAAAAAAAP7/AAABAAAAAAAAAP//AAABAAAAAAAAAAAAAAABAAAAAAAAAAEAAAABAAAAAAAAAAIAAAABAAAAAAABAP7/AAABAAAAAAABAP//AAABAAAAAAABAAAAAAABAAAAAAABAAEAAAABAAAAAAABAAIAAAABAAAAAAACAP7/AAABAAAAAAACAP//AAABAAAAAAACAAAAAAABAAAAAAACAAEAAAABAAAAAAACAAIAAAABAAAAAAADAP7/AAABAAAAAAADAP//AAABAAAAAAADAAAAAAABAAAAAAADAAEAAAABAAAAAAADAAIAAAABAAAAAAD6//3/AAABAAAAAAD6//7/AAABAAAAAAD6////AAABAAAAAAD6/wAAAAABAAAAAAD6/wEAAAABAAAAAAD6/wIAAAABAAAAAAD6/wMAAAABAAAAAAD6/wQAAAABAAAAAAD6/wUAAAABAAAAAAD7//3/AAABAAAAAAD7//7/AAABAAAAAAD7////AAABAAAAAAD7/wAAAAABAAAAAAD7/wEAAAABAAAAAAD7/wIAAAABAAAAAAD7/wMAAAABAAAAAAD7/wQAAAABAAAAAAD7/wUAAAABAAAAAAD8//3/AAABAAAAAAD8/wMAAAABAAAAAAD8/wQAAAABAAAAAAD8/wUAAAABAAAAAAD9//3/AAABAAAAAAD9/wMAAAABAAAAAAD9/wQAAAABAAAAAAD9/wUAAAABAAAAAAD+//3/AAABAAAAAAD+/wMAAAABAAAAAAD+/wQAAAABAAAAAAD+/wUAAAABAAAAAAD///3/AAABAAAAAAD//wMAAAABAAAAAAD//wQAAAABAAAAAAD//wUAAAABAAAAAAAAAP3/AAABAAAAAAAAAAMAAAABAAAAAAAAAAQAAAABAAAAAAAAAAUAAAABAAAAAAABAP3/AAABAAAAAAABAAMAAAABAAAAAAABAAQAAAABAAAAAAABAAUAAAABAAAAAAACAP3/AAABAAAAAAACAAMAAAABAAAAAAACAAQAAAABAAAAAAACAAUAAAABAAAAAAADAP3/AAABAAAAAAADAAMAAAABAAAAAAADAAQAAAABAAAAAAADAAUAAAABAAAAAAAEAP3/AAABAAAAAAAEAP7/AAABAAAAAAAEAP//AAABAAAAAAAEAAAAAAABAAAAAAAEAAEAAAABAAAAAAAEAAIAAAABAAAAAAAEAAMAAAABAAAAAAAEAAQAAAABAAAAAAAEAAUAAAABAAAAAAAFAP3/AAABAAAAAAAFAP7/AAABAAAAAAAFAP//AAABAAAAAAAFAAAAAAABAAAAAAAFAAEAAAABAAAAAAAFAAIAAAABAAAAAAAFAAMAAAABAAAAAAAFAAQAAAABAAAAAAAFAAUAAAABAAAAAAAGAP3/AAABAAAAAAAGAP7/AAABAAAAAAAGAP//AAABAAAAAAAGAAAAAAABAAAAAAAGAAEAAAABAAAAAAAGAAIAAAABAAAAAAAGAAMAAAABAAAAAAAGAAQAAAABAAAAAAAGAAUAAAABAAAAAAAHAP3/AAABAAAAAAAHAP7/AAABAAAAAAAHAP//AAABAAAAAAAHAAAAAAABAAAAAAAHAAEAAAABAAAAAAAHAAIAAAABAAAAAAAHAAMAAAABAAAAAAAHAAQAAAABAAAAAAAHAAUAAAABAAAAAAAIAP3/AAABAAAAAAAIAP7/AAABAAAAAAAIAP//AAABAAAAAAAIAAAAAAABAAAAAAAIAAEAAAABAAAAAAAIAAIAAAABAAAAAAAIAAMAAAABAAAAAAAIAAQAAAABAAAAAAAIAAUAAAABAAAAAAAJAP3/AAABAAAAAAAJAP7/AAABAAAAAAAJAP//AAABAAAAAAAJAAAAAAABAAAAAAAJAAEAAAABAAAAAAAJAAIAAAABAAAAAAAJAAMAAAABAAAAAAAJAAQAAAABAAAAAAAJAAUAAAABAAAAAAAKAP3/AAABAAAAAAAKAP7/AAABAAAAAAAKAP//AAABAAAAAAAKAAAAAAABAAAAAAAKAAEAAAABAAAAAAAKAAIAAAABAAAAAAAKAAMAAAABAAAAAAAKAAQAAAABAAAAAAAKAAUAAAABAAAAAAA=")
+tile_set = SubResource("TileSet_b2cq8")
+
+[node name="Wall" type="TileMapLayer" parent="."]
+y_sort_enabled = true
+position = Vector2(-81, -39)
+tile_map_data = PackedByteArray("AAD5//z/AAAAAAAAAAD5//3/AAAAAAAAAAD5//7/AAAAAAAAAAD5////AAAAAAAAAAD5/wAAAAAAAAAAAAD5/wEAAAAAAAAAAAD5/wIAAAAAAAAAAAD5/wMAAAAAAAAAAAD5/wQAAAAAAAAAAAD5/wUAAAAAAAAAAAD5/wYAAAAAAAAAAAD6/wYAAAAAAAAAAAD7/wYAAAAAAAAAAAD8/wYAAAAAAAAAAAD9/wYAAAAAAAAAAAD+/wYAAAAAAAAAAAD//wYAAAAAAAAAAAAAAAYAAAAAAAAAAAABAAYAAAAAAAAAAAACAAYAAAAAAAAAAAADAAYAAAAAAAAAAAAEAAYAAAAAAAAAAAAFAAYAAAAAAAAAAAAGAAYAAAAAAAAAAAAHAAYAAAAAAAAAAAAIAAYAAAAAAAAAAAAJAAYAAAAAAAAAAAAKAAYAAAAAAAAAAAALAAYAAAAAAAAAAAALAPz/AAAAAAAAAAALAP3/AAAAAAAAAAALAP7/AAAAAAAAAAALAP//AAAAAAAAAAALAAAAAAAAAAAAAAALAAEAAAAAAAAAAAALAAIAAAAAAAAAAAALAAMAAAAAAAAAAAALAAQAAAAAAAAAAAALAAUAAAAAAAAAAAD6//z/AAAAAAAAAAD7//z/AAAAAAAAAAD8//z/AAAAAAAAAAD9//z/AAAAAAAAAAD+//z/AAAAAAAAAAD///z/AAAAAAAAAAAAAPz/AAAAAAAAAAABAPz/AAAAAAAAAAACAPz/AAAAAAAAAAADAPz/AAAAAAAAAAAEAPz/AAAAAAAAAAAFAPz/AAAAAAAAAAAGAPz/AAAAAAAAAAAHAPz/AAAAAAAAAAAIAPz/AAAAAAAAAAAJAPz/AAAAAAAAAAAKAPz/AAAAAAAAAAA=")
+tile_set = SubResource("TileSet_b2cq8")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+layer = 50
+
+[node name="Chat" type="ColorRect" parent="CanvasLayer"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.376471)
+script = ExtResource("4_xb4v1")
+
+[node name="LineEdit" type="LineEdit" parent="CanvasLayer/Chat"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -354.0
+offset_top = -108.0
+offset_right = 364.0
+offset_bottom = -47.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_fonts/font = ExtResource("5_urvlt")
+theme_override_font_sizes/font_size = 30
+alignment = 1
+
+[node name="LocalCanvasLayer" type="CanvasLayer" parent="."]
+follow_viewport_enabled = true
+
+[node name="BubbleChatManager" type="Control" parent="LocalCanvasLayer"]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("5_d4w6o")
+bubble_chat_scene = ExtResource("6_d4w6o")
+offset = Vector2(0, -22.5)
+
+[node name="Indication" type="Label" parent="."]
+z_index = -5
+offset_left = -136.0
+offset_top = -81.0
+offset_right = 408.0
+offset_bottom = -15.0
+scale = Vector2(0.5, 0.5)
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 50
+text = "Press enter to chat with the others"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[connection signal="players_ready" from="." to="LocalCanvasLayer/BubbleChatManager" method="_on_level_players_ready"]
+[connection signal="on_message_sended" from="CanvasLayer/Chat" to="." method="_on_canvas_layer_on_message_sended"]
+[connection signal="on_message_sended" from="CanvasLayer/Chat" to="LocalCanvasLayer/BubbleChatManager" method="_on_chat_on_message_sended"]

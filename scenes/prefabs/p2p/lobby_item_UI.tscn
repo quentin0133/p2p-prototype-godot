@@ -1,0 +1,79 @@
+[gd_scene load_steps=4 format=3 uid="uid://jwuvmr3b1oc1"]
+
+[ext_resource type="Script" uid="uid://b6m5kkpgpt61q" path="res://scripts/multiplayer/p2p/lobby_item_UI.gd" id="1_qbjrc"]
+[ext_resource type="Texture2D" uid="uid://b2t63asvrctnx" path="res://assets/UI/private_icon.png" id="2_qbjrc"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qbjrc"]
+bg_color = Color(0.8, 0.8, 0.8, 1)
+
+[node name="LobbyItem" type="MarginContainer" node_paths=PackedStringArray("private_icon", "players_label", "host_label", "join_btn")]
+custom_minimum_size = Vector2(0, 50)
+offset_right = 945.0
+offset_bottom = 50.0
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+script = ExtResource("1_qbjrc")
+private_icon = NodePath("ColorRect/MarginContainer/HBoxContainer/PlayersGroup/PrivateIcon")
+players_label = NodePath("ColorRect/MarginContainer/HBoxContainer/PlayersGroup/PlayersLabel")
+host_label = NodePath("ColorRect/MarginContainer/HBoxContainer/HostLabel")
+join_btn = NodePath("ColorRect/MarginContainer/HBoxContainer/MarginContainer/Button")
+
+[node name="ColorRect" type="PanelContainer" parent="."]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_qbjrc")
+
+[node name="MarginContainer" type="MarginContainer" parent="ColorRect"]
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_right = 5
+
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect/MarginContainer"]
+layout_mode = 2
+
+[node name="PlayersGroup" type="HBoxContainer" parent="ColorRect/MarginContainer/HBoxContainer"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="PrivateIcon" type="TextureRect" parent="ColorRect/MarginContainer/HBoxContainer/PlayersGroup"]
+custom_minimum_size = Vector2(40, 20)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("2_qbjrc")
+expand_mode = 1
+stretch_mode = 5
+metadata/_edit_use_anchors_ = true
+
+[node name="PlayersLabel" type="Label" parent="ColorRect/MarginContainer/HBoxContainer/PlayersGroup"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "1/8"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HostLabel" type="Label" parent="ColorRect/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "quentin0133"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="MarginContainer" type="MarginContainer" parent="ColorRect/MarginContainer/HBoxContainer"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+theme_override_constants/margin_left = 35
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 35
+theme_override_constants/margin_bottom = 8
+
+[node name="Button" type="Button" parent="ColorRect/MarginContainer/HBoxContainer/MarginContainer"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Join lobby"

@@ -1,0 +1,238 @@
+[gd_scene load_steps=4 format=3 uid="uid://clfnephye0ym8"]
+
+[ext_resource type="PackedScene" uid="uid://jwuvmr3b1oc1" path="res://scenes/prefabs/p2p/lobby_item_UI.tscn" id="1_8uipc"]
+[ext_resource type="Script" uid="uid://c2pmukp235kbh" path="res://scripts/multiplayer/p2p/lobby_list.gd" id="1_pithk"]
+[ext_resource type="PackedScene" uid="uid://wgpa5am6bbcn" path="res://scenes/levels/lobby.tscn" id="4_6xt5d"]
+
+[node name="LobbyList" type="CanvasLayer" node_paths=PackedStringArray("container", "lobby_web_socket")]
+script = ExtResource("1_pithk")
+lobby_item_UI = ExtResource("1_8uipc")
+container = NodePath("Background/Group/List/ScrollContainer/VBoxContainer")
+lobby_web_socket = NodePath("")
+
+[node name="Background" type="ColorRect" parent="."]
+anchors_preset = -1
+anchor_left = 0.0703125
+anchor_top = 0.0972222
+anchor_right = 0.929688
+anchor_bottom = 0.902778
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+color = Color(1, 1, 1, 0.501961)
+metadata/_edit_use_anchors_ = true
+
+[node name="Group" type="Control" parent="Background"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 11.0
+offset_top = 11.0
+offset_right = -11.0005
+offset_bottom = -11.0002
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="CreateLobby" type="Button" parent="Background/Group"]
+layout_mode = 1
+anchors_preset = -1
+offset_right = 168.0
+offset_bottom = 42.0
+scale = Vector2(0.5, 0.5)
+theme_override_font_sizes/font_size = 20
+text = "Create a lobby"
+
+[node name="CreateLobby2" type="Button" parent="Background/Group"]
+layout_mode = 1
+anchors_preset = -1
+offset_left = 100.0
+offset_top = 1.52588e-05
+offset_right = 268.0
+offset_bottom = 42.0
+scale = Vector2(0.5, 0.5)
+theme_override_font_sizes/font_size = 20
+text = "Join a lobby"
+
+[node name="Labels" type="ColorRect" parent="Background/Group"]
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.068
+anchor_right = 0.972
+anchor_bottom = 0.116
+offset_top = 1.52588e-05
+offset_right = 0.103943
+offset_bottom = 1.14441e-05
+grow_horizontal = 2
+color = Color(0.717647, 0.717647, 0.717647, 1)
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Background/Group/Labels"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.007
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.343
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="PlayersLabel" type="Label" parent="Background/Group/Labels/HBoxContainer"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Players"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HostLabel" type="Label" parent="Background/Group/Labels/HBoxContainer"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Host"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ActionLabel" type="Label" parent="Background/Group/Labels/HBoxContainer"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Action"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="List" type="ColorRect" parent="Background/Group"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.011
+anchor_top = 0.084
+anchor_right = 0.989
+anchor_bottom = 1.0
+offset_left = -10.648
+offset_top = 29.0
+offset_right = -10.8685
+offset_bottom = -20.1522
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.716296, 0.716296, 0.716296, 1)
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Background/Group/List"]
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.011
+anchor_right = 0.998
+anchor_bottom = 1.0
+offset_top = -4.49733
+offset_right = 9.40942
+offset_bottom = -5.84784
+grow_horizontal = 2
+grow_vertical = 2
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Background/Group/List/ScrollContainer"]
+layout_mode = 2
+
+[node name="Lobby" parent="." instance=ExtResource("4_6xt5d")]
+
+[node name="FormClient" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.501961)
+
+[node name="Background" type="ColorRect" parent="FormClient"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -189.0
+offset_top = -74.0
+offset_right = 189.0
+offset_bottom = 74.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+color = Color(0.501961, 0.501961, 0.501961, 1)
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="FormClient/Background"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.0790514
+anchor_top = 0.129252
+anchor_right = 0.920949
+anchor_bottom = 0.340136
+offset_left = -7.1502
+offset_top = -3.99998
+offset_right = 4.15021
+offset_bottom = -3.99998
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="UsernameLabel" type="Label" parent="FormClient/Background/HBoxContainer3"]
+layout_mode = 2
+text = "Your username :"
+horizontal_alignment = 1
+
+[node name="UsernameTextEdit" type="LineEdit" parent="FormClient/Background/HBoxContainer3"]
+custom_minimum_size = Vector2(175, 0)
+layout_mode = 2
+size_flags_horizontal = 10
+placeholder_text = "username123"
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="FormClient/Background"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.083004
+anchor_top = 0.370545
+anchor_right = 0.911067
+anchor_bottom = 0.58143
+offset_left = -10.8577
+offset_top = -0.470161
+offset_right = 6.41898
+offset_bottom = -0.470161
+
+[node name="MaxPlayerLabel" type="Label" parent="FormClient/Background/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Max player :"
+horizontal_alignment = 1
+
+[node name="MaxPlayerSelect" type="Button" parent="FormClient/Background/HBoxContainer2"]
+custom_minimum_size = Vector2(25, 0)
+layout_mode = 2
+size_flags_horizontal = 10
+text = "4"
+
+[node name="HBoxContainer" type="HBoxContainer" parent="FormClient/Background"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.032
+anchor_top = 0.942
+anchor_right = 0.968379
+anchor_bottom = 0.942173
+offset_left = -0.192001
+offset_top = -33.382
+theme_override_constants/separation = 50
+alignment = 1
+metadata/_edit_use_anchors_ = true
+
+[node name="StartGameBtn" type="Button" parent="FormClient/Background/HBoxContainer"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Join the lobby"
+
+[node name="QuitBtn" type="Button" parent="FormClient/Background/HBoxContainer"]
+custom_minimum_size = Vector2(125, 0)
+layout_mode = 2
+text = "Cancel"
+
+[node name="Lobby" type="Control" parent="FormClient/Background"]
+layout_mode = 3
+anchors_preset = 0

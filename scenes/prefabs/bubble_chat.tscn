@@ -1,0 +1,101 @@
+[gd_scene load_steps=10 format=3 uid="uid://enapc4vqmp52"]
+
+[ext_resource type="Script" uid="uid://bn85hp8qhsxhi" path="res://scripts/bubble_chat.gd" id="1_bx134"]
+[ext_resource type="Texture2D" uid="uid://dsx2uxt4vhaeo" path="res://assets/UI/dialogue_box.png" id="1_lrvr0"]
+[ext_resource type="Theme" uid="uid://du3sx8psph84p" path="res://assets/themes/font_theme.tres" id="2_bx134"]
+[ext_resource type="FontFile" uid="uid://t30ga4c5n0aw" path="res://assets/font/PixelifySans-VariableFont_wght.ttf" id="3_w7i8j"]
+[ext_resource type="Script" uid="uid://d2b41fcep8l0v" path="res://scripts/label_enhanced.gd" id="4_aqi8x"]
+[ext_resource type="Script" uid="uid://ckeenp27nmgry" path="res://scripts/focus_container.gd" id="5_kwqjm"]
+
+[sub_resource type="Theme" id="Theme_51k32"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_8tg83"]
+texture = ExtResource("1_lrvr0")
+texture_margin_left = 23.0
+texture_margin_top = 23.0
+texture_margin_right = 22.0
+texture_margin_bottom = 29.0
+region_rect = Rect2(0, 0, 240, 157)
+
+[sub_resource type="Theme" id="Theme_eogo8"]
+default_font = ExtResource("3_w7i8j")
+default_font_size = 30
+
+[node name="BubbleChat" type="Control" node_paths=PackedStringArray("chat_label", "username_label")]
+layout_mode = 3
+anchors_preset = 0
+scale = Vector2(0.2, 0.2)
+script = ExtResource("1_bx134")
+chat_label = NodePath("DialoguePanelContainer/DialogueMarginContainer/DialogueLabel")
+username_label = NodePath("FocusContainer/UsernamePanelContainer/UsernameLabel")
+
+[node name="DialoguePanelContainer" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = -1
+offset_left = -23.0
+offset_top = -115.0
+offset_right = 23.0
+offset_bottom = -1.99999
+grow_horizontal = 2
+grow_vertical = 0
+size_flags_horizontal = 6
+size_flags_vertical = 8
+mouse_filter = 2
+theme = SubResource("Theme_51k32")
+theme_override_styles/panel = SubResource("StyleBoxTexture_8tg83")
+
+[node name="DialogueMarginContainer" type="MarginContainer" parent="DialoguePanelContainer"]
+layout_mode = 2
+size_flags_vertical = 8
+theme_override_constants/margin_bottom = 1
+
+[node name="DialogueLabel" type="Label" parent="DialoguePanelContainer/DialogueMarginContainer" node_paths=PackedStringArray("container")]
+custom_minimum_size = Vector2(0, 0.1)
+layout_mode = 2
+size_flags_vertical = 8
+theme = ExtResource("2_bx134")
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_constants/line_spacing = -2
+theme_override_fonts/font = ExtResource("3_w7i8j")
+theme_override_font_sizes/font_size = 45
+autowrap_mode = 3
+script = ExtResource("4_aqi8x")
+max_expand_x = 650.0
+container = NodePath("../..")
+
+[node name="FocusContainer" type="Control" parent="." node_paths=PackedStringArray("focused_node")]
+layout_mode = 1
+anchors_preset = 0
+offset_left = -23.0
+offset_top = -115.0
+offset_right = 23.0
+offset_bottom = -1.99999
+grow_horizontal = 2
+grow_vertical = 0
+script = ExtResource("5_kwqjm")
+focused_node = NodePath("../DialoguePanelContainer")
+
+[node name="UsernamePanelContainer" type="PanelContainer" parent="FocusContainer"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -23.0
+offset_top = -55.0
+offset_right = 23.0
+offset_bottom = 34.0
+grow_horizontal = 2
+size_flags_horizontal = 6
+size_flags_vertical = 8
+mouse_filter = 2
+theme = SubResource("Theme_51k32")
+theme_override_styles/panel = SubResource("StyleBoxTexture_8tg83")
+
+[node name="UsernameLabel" type="Label" parent="FocusContainer/UsernamePanelContainer" node_paths=PackedStringArray("container")]
+layout_mode = 2
+size_flags_vertical = 8
+theme = SubResource("Theme_eogo8")
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+script = ExtResource("4_aqi8x")
+max_expand_x = 200.0
+container = NodePath("..")

@@ -1,0 +1,101 @@
+[gd_scene load_steps=10 format=3 uid="uid://6ygmbhuumxpo"]
+
+[ext_resource type="Script" uid="uid://dsibwijgylvda" path="res://scripts/player/player_instance.gd" id="1_tou0u"]
+[ext_resource type="Texture2D" uid="uid://c3v56xeomfn45" path="res://assets/sprites/player.png" id="2_n0leu"]
+[ext_resource type="Texture2D" uid="uid://dsx2uxt4vhaeo" path="res://assets/UI/dialogue_box.png" id="3_8cdkg"]
+[ext_resource type="FontFile" uid="uid://t30ga4c5n0aw" path="res://assets/font/PixelifySans-VariableFont_wght.ttf" id="5_6o77n"]
+[ext_resource type="Script" uid="uid://d2b41fcep8l0v" path="res://scripts/label_enhanced.gd" id="6_6v0jn"]
+[ext_resource type="AudioStream" uid="uid://c8lc7vd5vpl5q" path="res://assets/sfx/text_sound.wav" id="7_6v0jn"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_b2cq8"]
+size = Vector2(22.5, 14)
+
+[sub_resource type="Theme" id="Theme_56dyf"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_56dyf"]
+texture = ExtResource("3_8cdkg")
+texture_margin_left = 23.0
+texture_margin_top = 23.0
+texture_margin_right = 22.0
+texture_margin_bottom = 29.0
+region_rect = Rect2(0, 0, 240, 157)
+
+[node name="Player" type="CharacterBody2D" node_paths=PackedStringArray("username_label", "dialogue_container", "dialogue_label")]
+y_sort_enabled = true
+collision_mask = 2
+motion_mode = 1
+platform_floor_layers = 4278190080
+script = ExtResource("1_tou0u")
+username_label = NodePath("Username")
+dialogue_container = NodePath("CanvasLayer/PanelContainer")
+dialogue_label = NodePath("CanvasLayer/PanelContainer/MarginContainer/Label")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(-0.75, 0)
+scale = Vector2(1.5, 1.5)
+texture = ExtResource("2_n0leu")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(-0.25, 3)
+shape = SubResource("RectangleShape2D_b2cq8")
+
+[node name="Username" type="Label" parent="."]
+z_index = 5
+offset_left = -31.13
+offset_top = -23.0
+offset_right = 383.87
+offset_bottom = 44.0
+scale = Vector2(0.15, 0.15)
+theme_override_font_sizes/font_size = 48
+text = "username"
+horizontal_alignment = 1
+vertical_alignment = 1
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="Camera2D" type="Camera2D" parent="."]
+zoom = Vector2(3, 3)
+
+[node name="CanvasLayer" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+scale = Vector2(0.2, 0.2)
+
+[node name="PanelContainer" type="PanelContainer" parent="CanvasLayer"]
+visible = false
+layout_mode = 1
+anchors_preset = -1
+anchor_left = -0.23
+anchor_top = -0.168
+anchor_right = 0.23
+anchor_bottom = -0.168
+offset_left = -23.0
+offset_top = -230.0
+offset_right = 23.0
+offset_bottom = -117.0
+grow_horizontal = 2
+grow_vertical = 0
+size_flags_vertical = 8
+mouse_filter = 2
+theme = SubResource("Theme_56dyf")
+theme_override_styles/panel = SubResource("StyleBoxTexture_56dyf")
+
+[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/PanelContainer"]
+layout_mode = 2
+size_flags_vertical = 8
+theme_override_constants/margin_bottom = 1
+
+[node name="Label" type="Label" parent="CanvasLayer/PanelContainer/MarginContainer"]
+layout_mode = 2
+size_flags_vertical = 8
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_constants/line_spacing = -2
+theme_override_fonts/font = ExtResource("5_6o77n")
+theme_override_font_sizes/font_size = 50
+autowrap_mode = 3
+script = ExtResource("6_6v0jn")
+max_expand_x = 500.0
+
+[node name="DialogueSFX" type="AudioStreamPlayer2D" parent="."]
+stream = ExtResource("7_6v0jn")
+volume_db = -6.0

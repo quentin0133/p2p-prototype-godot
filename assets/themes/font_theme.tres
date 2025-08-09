@@ -1,0 +1,7 @@
+[gd_resource type="Theme" load_steps=2 format=3 uid="uid://du3sx8psph84p"]
+
+[ext_resource type="FontFile" uid="uid://t30ga4c5n0aw" path="res://assets/font/PixelifySans-VariableFont_wght.ttf" id="1_srqud"]
+
+[resource]
+default_font = ExtResource("1_srqud")
+default_font_size = 45

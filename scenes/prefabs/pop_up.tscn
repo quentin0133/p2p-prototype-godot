@@ -1,0 +1,92 @@
+[gd_scene load_steps=4 format=3 uid="uid://2c01kkts7fl"]
+
+[ext_resource type="Script" uid="uid://b86xx2s5w2is3" path="res://scripts/pop_up.gd" id="1_05r18"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_05r18"]
+bg_color = Color(0.627451, 0.627451, 0.627451, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bau62"]
+bg_color = Color(0.745098, 0.745098, 0.745098, 1)
+
+[node name="BlackFog" type="ColorRect" node_paths=PackedStringArray("title", "message", "button")]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+color = Color(0.0392157, 0.0392157, 0.0392157, 0.376471)
+script = ExtResource("1_05r18")
+title = NodePath("Bg/MarginContainer/PanelContainer/MarginContainer/VBoxContainer/Title")
+message = NodePath("Bg/MarginContainer/PanelContainer/MarginContainer/VBoxContainer/Message")
+button = NodePath("Bg/MarginContainer/PanelContainer/MarginContainer/VBoxContainer/Control/Button")
+
+[node name="Bg" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -79.0
+offset_right = 160.0
+offset_bottom = 79.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_05r18")
+
+[node name="MarginContainer" type="MarginContainer" parent="Bg"]
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+
+[node name="PanelContainer" type="PanelContainer" parent="Bg/MarginContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bau62")
+
+[node name="MarginContainer" type="MarginContainer" parent="Bg/MarginContainer/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 5
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Bg/MarginContainer/PanelContainer/MarginContainer"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Bg/MarginContainer/PanelContainer/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_constants/outline_size = 10
+theme_override_constants/shadow_outline_size = 5
+theme_override_font_sizes/font_size = 30
+text = "Erreur"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Message" type="Label" parent="Bg/MarginContainer/PanelContainer/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+size_flags_vertical = 6
+theme_override_font_sizes/font_size = 18
+text = "Le lobby n'a pas été trouvé"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+metadata/_edit_use_anchors_ = true
+
+[node name="Control" type="MarginContainer" parent="Bg/MarginContainer/PanelContainer/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+
+[node name="Button" type="Button" parent="Bg/MarginContainer/PanelContainer/MarginContainer/VBoxContainer/Control"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 18
+text = "Ok"

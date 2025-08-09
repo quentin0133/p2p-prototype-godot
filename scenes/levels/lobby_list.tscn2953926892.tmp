@@ -1,0 +1,709 @@
+[gd_scene load_steps=8 format=3 uid="uid://clfnephye0ym8"]
+
+[ext_resource type="PackedScene" uid="uid://jwuvmr3b1oc1" path="res://scenes/prefabs/p2p/lobby_item_UI.tscn" id="1_8uipc"]
+[ext_resource type="Script" uid="uid://c2pmukp235kbh" path="res://scripts/multiplayer/p2p/lobby_list.gd" id="1_pithk"]
+[ext_resource type="PackedScene" uid="uid://cf3uexk5mn8ik" path="res://scenes/prefabs/p2p/player_item_lobby.tscn" id="3_t6511"]
+
+[sub_resource type="GDScript" id="GDScript_top58"]
+resource_name = "host_lobby_ui"
+script/source = "extends ColorRect
+
+@export var player_item_scene: PackedScene;
+
+@onready var players_container = $Background/Control/ScrollContainer/VBoxContainer
+
+var current_lobby: Lobby = null;
+var current_nb_players = 0;
+var players_UI: Array[PlayerItemUI];
+
+func _ready() -> void:
+	LobbyWebSocket.add_lobbies.connect(add_lobbies);
+	LobbyWebSocket.update_lobbies.connect(update_lobbies);
+
+func _exit_tree() -> void:
+	if (LobbyWebSocket.add_lobbies.is_connected(add_lobbies)):
+		LobbyWebSocket.add_lobbies.disconnect(add_lobbies);
+	if (LobbyWebSocket.update_lobbies.is_connected(update_lobbies)):
+		LobbyWebSocket.update_lobbies.disconnect(update_lobbies);
+	if (LobbyWebSocket.remove_lobbies.is_connected(remove_lobbies)):
+		LobbyWebSocket.remove_lobbies.disconnect(remove_lobbies);
+
+func add_lobbies(lobbies: Array[Lobby]):
+	var lobby = get_by_player_in(lobbies);
+	if (lobby == null):
+		return;
+	
+	LobbyWebSocket.add_lobbies.disconnect(add_lobbies);
+	LobbyWebSocket.remove_lobbies.connect(remove_lobbies);
+	
+	visible = true;
+	current_lobby = lobby;
+	update_lobby_instances();
+	update_players();
+
+func update_lobbies(lobbies: Array[Lobby]):
+	var lobby = get_by_player_in(lobbies);
+	if (lobby == null): return;
+	
+	current_lobby = lobby;
+	visible = true;
+	
+	if (current_lobby.max_player != len(players_UI)):
+		update_lobby_instances();
+	
+	update_players();
+
+func remove_lobbies(lobbies: Array[Lobby]):
+	var lobby = get_by_player_in(lobbies);
+	if (lobby == null): return;
+	
+	LobbyWebSocket.add_lobbies.connect(add_lobbies);
+	LobbyWebSocket.remove_lobbies.disconnect(remove_lobbies);
+	
+	hide_lobby();
+	
+	for player_UI in players_UI:
+		player_UI.queue_free();
+
+func quit_lobby():
+	LobbyWebSocket.quit_lobby_post(current_lobby.id);
+	hide_lobby();
+
+func update_lobby_instances():
+	if (current_lobby.max_player != len(players_UI)):
+		var len_diff = abs(current_lobby.max_player - len(players_UI));
+		if (current_lobby.max_player < len(players_UI)):
+			for i in range(len_diff):
+				players_UI[i].queue_free();
+		elif (current_lobby.max_player > len(players_UI)):
+			for i in range(len_diff):
+				var player_UI = instantiate_player_UI();
+				player_UI.set_deactivate();
+	if (len(players_UI) < current_nb_players):
+		current_nb_players = len(players_UI);
+
+func update_players():
+	if (len(current_lobby.players) < current_nb_players):
+		var len_diff = abs(len(current_lobby.players) - current_nb_players);
+		var active_players_UI = players_UI.filter(func(player_UI): return players_UI.id != null);
+		for i in range(len_diff):
+			var player_UI = players_UI.pop_back();
+			player_UI.set_deactivate();
+	current_nb_players = len(current_lobby.players);
+	for i in range(current_nb_players):
+		players_UI[i].set_active(current_lobby.players[i], i == 0);
+
+func instantiate_player_UI():
+	var player_item_instance = player_item_scene.instantiate() as PlayerItemUI;
+	players_container.add_child(player_item_instance);
+	players_UI.append(player_item_instance);
+	return player_item_instance;
+
+func remove_player(player_id: String):
+	var index_player = players_UI.find(func(player_UI): player_UI.id == player_id);
+	if (index_player == -1):
+		return;
+	
+	var player_removed = players_UI[index_player];
+	player_removed.set_deactivate();
+	if (LobbyWebSocket.websocket_client_id == player_removed.id):
+		hide_lobby();
+
+func hide_lobby():
+	current_lobby = null;
+	visible = false;
+
+func get_by_player_in(lobbies: Array[Lobby]) -> Lobby :
+	for lobby in lobbies:
+		var index_player = lobby.players.find_custom(
+			func(player): 
+				return player.id == LobbyWebSocket.websocket_user_id;
+		);
+		if index_player != -1:
+			return lobby;
+	return null;
+"
+
+[sub_resource type="GDScript" id="GDScript_6xt5d"]
+script/source = "extends ColorRect
+
+signal submit_host;
+
+@onready var username: LineEdit = $Background/HBoxContainer3/UsernameTextEdit;
+@onready var max_player: LineEdit = $Background/HBoxContainer2/MaxPlayerTextEdit
+
+func _ready() -> void:
+	visibility_changed.connect(reset_form);
+
+func _exit_tree() -> void:
+	if (visibility_changed.is_connected(reset_form)):
+		visibility_changed.disconnect(reset_form);
+
+func reset_form():
+	if (!visible): return;
+	username.text = \"\";
+	max_player.text = \"\";
+
+func submit():
+	username.text = username.text.strip_edges();
+	if (username.text == \"\"):
+		# feedback error
+		return;
+	if (!max_player.text.is_valid_int()):
+		# feedback error
+		return;
+	var player = Player.new(LobbyWebSocket.websocket_user_id, username.text);
+	LobbyWebSocket.host_lobby_post(player, int(max_player.text));
+	submit_host.emit();
+"
+
+[sub_resource type="GDScript" id="GDScript_g64qr"]
+resource_name = "FormClientCode"
+script/source = "extends ColorRect
+
+signal submit_lobby;
+
+@onready var username: LineEdit = $Background/HBoxContainer3/UsernameTextEdit;
+@onready var lobby_id: LineEdit = $Background/HBoxContainer2/IdLobbyTextEdit;
+
+func _ready() -> void:
+	visibility_changed.connect(reset_form);
+
+func _exit_tree() -> void:
+	if (visibility_changed.is_connected(reset_form)):
+		visibility_changed.disconnect(reset_form);
+
+func reset_form():
+	if (!visible): return;
+	username.text = \"\";
+	lobby_id.text = \"\";
+
+func submit():
+	username.text = username.text.strip_edges();
+	if (username.text == \"\"):
+		# feedback error
+		return;
+	if (lobby_id.text == \"\"):
+		# feedback error
+		return;
+	var player = Player.new(LobbyWebSocket.websocket_user_id, username.text);
+	LobbyWebSocket.join_lobby_post(lobby_id.text, player);
+	submit_lobby.emit();
+"
+
+[sub_resource type="GDScript" id="GDScript_2edry"]
+resource_name = "FormClientLFG"
+script/source = "class_name FormClientLFG
+extends Control
+
+signal submit_lobby;
+
+@onready var username: LineEdit = $Background/HBoxContainer3/UsernameTextEdit;
+
+var lobby_id: String;
+
+func _ready() -> void:
+	visibility_changed.connect(reset_form);
+
+func _exit_tree() -> void:
+	if (visibility_changed.is_connected(reset_form)):
+		visibility_changed.disconnect(reset_form);
+
+func reset_form():
+	if (!visible): return;
+	username.text = \"\";
+
+func show_form(lobby_id: String):
+	self.lobby_id = lobby_id;
+	visible = true;
+
+func submit():
+	username.text = username.text.strip_edges();
+	if (username.text == \"\"):
+		# feedback error
+		return;
+	var player = Player.new(LobbyWebSocket.websocket_user_id, username.text);
+	LobbyWebSocket.join_lobby_post(lobby_id, player);
+	submit_lobby.emit();
+"
+
+[node name="Menu" type="CanvasLayer" node_paths=PackedStringArray("container")]
+script = ExtResource("1_pithk")
+lobby_item_UI = ExtResource("1_8uipc")
+container = NodePath("LobbyList/Group/VBoxContainer/List/ScrollContainer/VBoxContainer")
+
+[node name="LobbyList" type="ColorRect" parent="."]
+anchors_preset = -1
+anchor_left = 0.0703125
+anchor_top = 0.0972222
+anchor_right = 0.929688
+anchor_bottom = 0.902778
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+color = Color(1, 1, 1, 0.501961)
+metadata/_edit_use_anchors_ = true
+
+[node name="Group" type="Control" parent="LobbyList"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 11.0
+offset_top = 11.0
+offset_right = -11.0005
+offset_bottom = -11.0002
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="LobbyList/Group"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="LobbyList/Group/VBoxContainer"]
+custom_minimum_size = Vector2(0, 35)
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="CreateLobby" type="Button" parent="LobbyList/Group/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(125, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Create a lobby"
+
+[node name="JoinLobby" type="Button" parent="LobbyList/Group/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(185, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Join a lobby with a code"
+
+[node name="Labels" type="ColorRect" parent="LobbyList/Group/VBoxContainer"]
+custom_minimum_size = Vector2(0, 25)
+layout_mode = 2
+color = Color(0.717647, 0.717647, 0.717647, 1)
+
+[node name="HBoxContainer" type="HBoxContainer" parent="LobbyList/Group/VBoxContainer/Labels"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.00723141
+anchor_right = 0.971074
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+alignment = 1
+metadata/_edit_use_anchors_ = true
+
+[node name="PlayersLabel" type="Label" parent="LobbyList/Group/VBoxContainer/Labels/HBoxContainer"]
+clip_contents = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Players"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HostLabel" type="Label" parent="LobbyList/Group/VBoxContainer/Labels/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 15
+text = "Host"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ActionLabel" type="Label" parent="LobbyList/Group/VBoxContainer/Labels/HBoxContainer"]
+custom_minimum_size = Vector2(175, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Action"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="List" type="ColorRect" parent="LobbyList/Group/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+color = Color(0.716296, 0.716296, 0.716296, 1)
+
+[node name="ScrollContainer" type="ScrollContainer" parent="LobbyList/Group/VBoxContainer/List"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 2
+metadata/_edit_use_anchors_ = true
+
+[node name="VBoxContainer" type="VBoxContainer" parent="LobbyList/Group/VBoxContainer/List/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Lobby" type="ColorRect" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.501961)
+script = SubResource("GDScript_top58")
+player_item_scene = ExtResource("3_t6511")
+
+[node name="Background" type="ColorRect" parent="Lobby"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.282986
+anchor_top = 0.268519
+anchor_right = 0.717014
+anchor_bottom = 0.731481
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+color = Color(0.501961, 0.501961, 0.501961, 1)
+metadata/_edit_use_anchors_ = true
+
+[node name="Control" type="Control" parent="Lobby/Background"]
+anchors_preset = 0
+offset_right = 500.0
+offset_bottom = 225.0
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Lobby/Background/Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 25.0
+offset_top = 24.0
+offset_right = -25.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+horizontal_scroll_mode = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Lobby/Background/Control/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+metadata/_edit_use_anchors_ = true
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Lobby/Background"]
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.786667
+anchor_right = 1.0
+anchor_bottom = 0.999613
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 125
+alignment = 1
+metadata/_edit_use_anchors_ = true
+
+[node name="StartGameBtn" type="Button" parent="Lobby/Background/HBoxContainer"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+size_flags_vertical = 4
+text = "Start the game"
+
+[node name="QuitBtn" type="Button" parent="Lobby/Background/HBoxContainer"]
+custom_minimum_size = Vector2(125, 40)
+layout_mode = 2
+size_flags_vertical = 4
+text = "Quit lobby"
+
+[node name="Lobby" type="Control" parent="Lobby/Background"]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="FormHost" type="ColorRect" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.501961)
+script = SubResource("GDScript_6xt5d")
+
+[node name="Background" type="ColorRect" parent="FormHost"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -189.0
+offset_top = -80.0
+offset_right = 189.0
+offset_bottom = 80.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+color = Color(0.501961, 0.501961, 0.501961, 1)
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="FormHost/Background"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.0608466
+anchor_top = 0.163043
+anchor_right = 0.933862
+anchor_bottom = 0.275362
+grow_horizontal = 2
+grow_vertical = 2
+metadata/_edit_use_anchors_ = true
+
+[node name="UsernameLabel" type="Label" parent="FormHost/Background/HBoxContainer3"]
+layout_mode = 2
+text = "Your username :"
+horizontal_alignment = 1
+
+[node name="UsernameTextEdit" type="LineEdit" parent="FormHost/Background/HBoxContainer3"]
+custom_minimum_size = Vector2(175, 0)
+layout_mode = 2
+size_flags_horizontal = 10
+placeholder_text = "username123"
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="FormHost/Background"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.0555556
+anchor_top = 0.42029
+anchor_right = 0.928571
+anchor_bottom = 0.532609
+
+[node name="MaxPlayerLabel" type="Label" parent="FormHost/Background/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Max player :"
+horizontal_alignment = 1
+
+[node name="MaxPlayerTextEdit" type="LineEdit" parent="FormHost/Background/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 10
+placeholder_text = "4-8"
+max_length = 1
+virtual_keyboard_type = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="FormHost/Background"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.032
+anchor_top = 0.921137
+anchor_right = 0.968379
+anchor_bottom = 0.92131
+offset_left = -0.192001
+offset_top = -33.382
+theme_override_constants/separation = 50
+alignment = 1
+metadata/_edit_use_anchors_ = true
+
+[node name="StartHostingBtn" type="Button" parent="FormHost/Background/HBoxContainer"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Start hosting"
+
+[node name="CancelBtn" type="Button" parent="FormHost/Background/HBoxContainer"]
+custom_minimum_size = Vector2(125, 0)
+layout_mode = 2
+text = "Cancel"
+
+[node name="Lobby" type="Control" parent="FormHost/Background"]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="FormClientCode" type="ColorRect" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.501961)
+script = SubResource("GDScript_g64qr")
+
+[node name="Background" type="ColorRect" parent="FormClientCode"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -189.0
+offset_top = -80.0
+offset_right = 189.0
+offset_bottom = 80.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+color = Color(0.501961, 0.501961, 0.501961, 1)
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="FormClientCode/Background"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.0608466
+anchor_top = 0.163043
+anchor_right = 0.933862
+anchor_bottom = 0.275362
+grow_horizontal = 2
+grow_vertical = 2
+metadata/_edit_use_anchors_ = true
+
+[node name="UsernameLabel" type="Label" parent="FormClientCode/Background/HBoxContainer3"]
+layout_mode = 2
+text = "Your username :"
+horizontal_alignment = 1
+
+[node name="UsernameTextEdit" type="LineEdit" parent="FormClientCode/Background/HBoxContainer3"]
+custom_minimum_size = Vector2(175, 0)
+layout_mode = 2
+size_flags_horizontal = 10
+placeholder_text = "username123"
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="FormClientCode/Background"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.0555556
+anchor_top = 0.42029
+anchor_right = 0.928571
+anchor_bottom = 0.532609
+offset_top = -0.246376
+offset_bottom = 12.7826
+
+[node name="IdLobbyLabel" type="Label" parent="FormClientCode/Background/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Id du lobby :"
+horizontal_alignment = 1
+
+[node name="IdLobbyTextEdit" type="LineEdit" parent="FormClientCode/Background/HBoxContainer2"]
+custom_minimum_size = Vector2(175, 0)
+layout_mode = 2
+size_flags_horizontal = 10
+max_length = 1
+virtual_keyboard_type = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="FormClientCode/Background"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.032
+anchor_top = 0.942
+anchor_right = 0.968379
+anchor_bottom = 0.942173
+offset_left = -0.192001
+offset_top = -33.382
+theme_override_constants/separation = 50
+alignment = 1
+metadata/_edit_use_anchors_ = true
+
+[node name="JoinLobbyBtn" type="Button" parent="FormClientCode/Background/HBoxContainer"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Join the lobby"
+
+[node name="CancelBtn" type="Button" parent="FormClientCode/Background/HBoxContainer"]
+custom_minimum_size = Vector2(125, 0)
+layout_mode = 2
+text = "Cancel"
+
+[node name="Lobby" type="Control" parent="FormClientCode/Background"]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="FormClientLFG" type="ColorRect" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.501961)
+script = SubResource("GDScript_2edry")
+
+[node name="Background" type="ColorRect" parent="FormClientLFG"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -189.0
+offset_top = -55.0
+offset_right = 189.0
+offset_bottom = 55.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+color = Color(0.501961, 0.501961, 0.501961, 1)
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="FormClientLFG/Background"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.0608466
+anchor_top = 0.163637
+anchor_right = 0.933862
+anchor_bottom = 0.445455
+grow_horizontal = 2
+grow_vertical = 2
+metadata/_edit_use_anchors_ = true
+
+[node name="UsernameLabel" type="Label" parent="FormClientLFG/Background/HBoxContainer3"]
+layout_mode = 2
+text = "Your username :"
+horizontal_alignment = 1
+
+[node name="UsernameTextEdit" type="LineEdit" parent="FormClientLFG/Background/HBoxContainer3"]
+custom_minimum_size = Vector2(175, 0)
+layout_mode = 2
+size_flags_horizontal = 10
+placeholder_text = "username123"
+
+[node name="HBoxContainer" type="HBoxContainer" parent="FormClientLFG/Background"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.032
+anchor_top = 0.942
+anchor_right = 0.968379
+anchor_bottom = 0.942173
+offset_left = -0.192001
+offset_top = -33.382
+theme_override_constants/separation = 50
+alignment = 1
+metadata/_edit_use_anchors_ = true
+
+[node name="JoinLobbyBtn" type="Button" parent="FormClientLFG/Background/HBoxContainer"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Join the lobby"
+
+[node name="CancelBtn" type="Button" parent="FormClientLFG/Background/HBoxContainer"]
+custom_minimum_size = Vector2(125, 0)
+layout_mode = 2
+text = "Cancel"
+
+[node name="Lobby" type="Control" parent="FormClientLFG/Background"]
+layout_mode = 3
+anchors_preset = 0
+
+[connection signal="want_join_lobby" from="." to="FormClientLFG" method="show_form"]
+[connection signal="pressed" from="LobbyList/Group/VBoxContainer/HBoxContainer/CreateLobby" to="FormHost" method="set_visible" binds= [true]]
+[connection signal="pressed" from="LobbyList/Group/VBoxContainer/HBoxContainer/JoinLobby" to="FormClientCode" method="set_visible" binds= [true]]
+[connection signal="pressed" from="Lobby/Background/HBoxContainer/QuitBtn" to="Lobby" method="quit_lobby"]
+[connection signal="submit_host" from="FormHost" to="FormHost" method="set_visible" binds= [false]]
+[connection signal="pressed" from="FormHost/Background/HBoxContainer/StartHostingBtn" to="FormHost" method="submit"]
+[connection signal="pressed" from="FormHost/Background/HBoxContainer/CancelBtn" to="FormHost" method="set_visible" binds= [false]]
+[connection signal="submit_lobby" from="FormClientCode" to="FormClientCode" method="set_visible" binds= [false]]
+[connection signal="pressed" from="FormClientCode/Background/HBoxContainer/JoinLobbyBtn" to="FormClientCode" method="submit"]
+[connection signal="pressed" from="FormClientCode/Background/HBoxContainer/CancelBtn" to="FormClientCode" method="set_visible" binds= [false]]
+[connection signal="submit_lobby" from="FormClientLFG" to="FormClientLFG" method="set_visible" binds= [false]]
+[connection signal="pressed" from="FormClientLFG/Background/HBoxContainer/JoinLobbyBtn" to="FormClientLFG" method="submit"]
+[connection signal="pressed" from="FormClientLFG/Background/HBoxContainer/CancelBtn" to="FormClientLFG" method="set_visible" binds= [false]]

@@ -1,0 +1,60 @@
+[gd_scene load_steps=3 format=3 uid="uid://dpqnyd7y4pom"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_05r18"]
+bg_color = Color(0.627451, 0.627451, 0.627451, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bau62"]
+bg_color = Color(0.745098, 0.745098, 0.745098, 1)
+
+[node name="BlackFog" type="ColorRect"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+color = Color(0.0392157, 0.0392157, 0.0392157, 0.376471)
+
+[node name="Bg" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -117.0
+offset_top = -38.0
+offset_right = 117.0
+offset_bottom = 38.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_05r18")
+
+[node name="MarginContainer" type="MarginContainer" parent="Bg"]
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+
+[node name="PanelContainer" type="PanelContainer" parent="Bg/MarginContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bau62")
+
+[node name="MarginContainer" type="MarginContainer" parent="Bg/MarginContainer/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 5
+
+[node name="Title" type="Label" parent="Bg/MarginContainer/PanelContainer/MarginContainer"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_constants/outline_size = 10
+theme_override_constants/shadow_outline_size = 5
+theme_override_font_sizes/font_size = 22
+text = "Chargement..."
+horizontal_alignment = 1
+vertical_alignment = 1

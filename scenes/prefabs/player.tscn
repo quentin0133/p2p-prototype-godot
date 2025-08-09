@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://dfh2a3h6t0mr2"]
+
+[ext_resource type="PackedScene" uid="uid://bqs0y8wqyxvyo" path="res://scenes/prefabs/character.tscn" id="1_06qtw"]
+
+[node name="Player" instance=ExtResource("1_06qtw")]
+collision_layer = 3
+
+[node name="Camera2D" type="Camera2D" parent="." index="4"]
+zoom = Vector2(3, 3)
+process_callback = 0

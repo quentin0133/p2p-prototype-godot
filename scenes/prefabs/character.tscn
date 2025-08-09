@@ -1,0 +1,42 @@
+[gd_scene load_steps=5 format=3 uid="uid://bqs0y8wqyxvyo"]
+
+[ext_resource type="Script" uid="uid://dsibwijgylvda" path="res://scripts/player/player_instance.gd" id="1_rui0y"]
+[ext_resource type="Texture2D" uid="uid://c3v56xeomfn45" path="res://assets/sprites/player.png" id="2_u5kyt"]
+[ext_resource type="AudioStream" uid="uid://c8lc7vd5vpl5q" path="res://assets/sfx/text_sound.wav" id="7_8tg83"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_b2cq8"]
+size = Vector2(22, 14)
+
+[node name="Character" type="CharacterBody2D" node_paths=PackedStringArray("username_label")]
+y_sort_enabled = true
+collision_mask = 2
+motion_mode = 1
+platform_floor_layers = 4278190080
+script = ExtResource("1_rui0y")
+username_label = NodePath("Username")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(1.5, 1.5)
+texture = ExtResource("2_u5kyt")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 3)
+shape = SubResource("RectangleShape2D_b2cq8")
+
+[node name="Username" type="Label" parent="."]
+z_index = 5
+offset_left = -31.13
+offset_top = -23.0
+offset_right = 383.87
+offset_bottom = 44.0
+scale = Vector2(0.15, 0.15)
+theme_override_font_sizes/font_size = 48
+text = "username"
+horizontal_alignment = 1
+vertical_alignment = 1
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="DialogueSFX" type="AudioStreamPlayer2D" parent="."]
+stream = ExtResource("7_8tg83")
+volume_db = -15.0
