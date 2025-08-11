@@ -3,7 +3,7 @@ extends Node
 
 const TIMEOUT := 5.0;
 
-func request_json(url: String, method: HTTPClient.Method, data = null) -> Dictionary:
+func request_json(url: String, method: HTTPClient.Method, data = null, show_loading = true) -> Dictionary:
 	var json_text = "";
 	if (data != null):
 		json_text = JSON.stringify(data);
@@ -14,15 +14,16 @@ func request_json(url: String, method: HTTPClient.Method, data = null) -> Dictio
 	var err = http_request.request(url, ["Content-Type: application/json"], method, json_text)
 	
 	if err != OK:
-		PopUpManager.remove_pop_up();
 		push_error("HTTP Request error: %s" % str(err))
 		return {"error": 400, "message": "Request failed"}
 	
-	PopUpManager.show_pop_up_loading()
+	if (show_loading):
+		PopUpManager.show_pop_up_loading()
 	
 	var on_request_completed_param = await http_request.request_completed;
 	
-	PopUpManager.remove_pop_up();
+	if (show_loading):
+		PopUpManager.remove_pop_up();
 	
 	var result = on_request_completed_param[0];
 	var response_code = on_request_completed_param[1];

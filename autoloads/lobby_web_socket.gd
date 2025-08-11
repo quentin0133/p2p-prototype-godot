@@ -8,7 +8,7 @@ signal remove_lobby(lobby_id: String);
 #const WS_URL = "ws://localhost:3000";
 #const HTTP_URL = "http://localhost:3000/lobbies";
 const WS_URL = "wss://p2p-prototype-api-production.up.railway.app";
-const HTTP_URL = "http://p2p-prototype-api-production.up.railway.app/lobbies";
+const HTTP_URL = "https://p2p-prototype-api-production.up.railway.app/lobbies";
 
 var socket := WebSocketPeer.new();
 var http := HttpService.new()
@@ -185,7 +185,7 @@ func ice_candidate_put(player_id: String, lobby_id: String, ice_candidates: Arra
 		"is_host": is_host
 	}
 	
-	return await http.request_json(HTTP_URL + "/send-ice-candidates", HTTPClient.Method.METHOD_PUT, data);
+	return await http.request_json(HTTP_URL + "/send-ice-candidates", HTTPClient.Method.METHOD_PUT, data, false);
 
 func established_connection(player_id, lobby_id):
 	var data := {

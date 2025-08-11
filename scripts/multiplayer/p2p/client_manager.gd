@@ -38,6 +38,7 @@ func join_game(lobby: Lobby, player: Player):
 	LobbyWebSocket.update_lobby.connect(on_update_lobbies);
 
 func on_update_lobbies(lobby: Lobby):
+	print("A")
 	if (!LobbyUtils.has_player_in(LobbyWebSocket.websocket_user_id, lobby)):
 		return;
 	
@@ -158,12 +159,13 @@ func _process(delta: float) -> void:
 func quit_lobby():
 	if (LobbyWebSocket.update_lobby.is_connected(on_update_lobbies)):
 		LobbyWebSocket.update_lobby.disconnect(on_update_lobbies);
-	if (connected_peer.ice_candidate_created.is_connected(ice_candidate_created)):
-		connected_peer.ice_candidate_created.disconnect(ice_candidate_created);
-	if (connected_peer.session_description_created.is_connected(answer_signal_callback)):
-		connected_peer.session_description_created.disconnect(answer_signal_callback);
-	connected_peer.close();
-	connected_peer = null;
+	if (connected_peer):
+		if (connected_peer.ice_candidate_created.is_connected(ice_candidate_created)):
+			connected_peer.ice_candidate_created.disconnect(ice_candidate_created);
+		if (connected_peer.session_description_created.is_connected(answer_signal_callback)):
+			connected_peer.session_description_created.disconnect(answer_signal_callback);
+		connected_peer.close();
+		connected_peer = null;
 	if (rtc_peer.peer_connected.is_connected(_on_peer_connected)):
 		rtc_peer.peer_connected.disconnect(_on_peer_connected);
 	if (rtc_peer):
