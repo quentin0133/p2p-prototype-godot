@@ -5,8 +5,10 @@ signal add_lobby(lobby: Lobby);
 signal update_lobby(lobby: Lobby);
 signal remove_lobby(lobby_id: String);
 
-const WS_URL = "ws://localhost:3000";
-const HTTP_URL = "http://localhost:3000/lobbies";
+#const WS_URL = "ws://localhost:3000";
+#const HTTP_URL = "http://localhost:3000/lobbies";
+const WS_URL = "wss://p2p-prototype-api-production.up.railway.app";
+const HTTP_URL = "http://p2p-prototype-api-production.up.railway.app/lobbies";
 
 var socket := WebSocketPeer.new();
 var http := HttpService.new()
@@ -23,9 +25,7 @@ func connect_socket():
 	var err = socket.connect_to_url(WS_URL);
 	if err != OK:
 		print("Unable to connect");
-		set_process(false);
-	else:
-		set_process(true);
+	set_process(err == OK);
 
 func disconnect_socket():
 	var state = socket.get_ready_state();

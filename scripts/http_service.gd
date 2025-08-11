@@ -1,17 +1,17 @@
 class_name HttpService
-extends HTTPRequest
+extends Node
 
-var http := HTTPRequest.new()
-
-func _init():
-	http.timeout = 8.0;
-	add_child(http)
+const TIMEOUT := 5.0;
 
 func request_json(url: String, method: HTTPClient.Method, data = null) -> Dictionary:
 	var json_text = "";
 	if (data != null):
 		json_text = JSON.stringify(data);
-	var err = http.request(url, ["Content-Type: application/json"], method, json_text)
+	
+	var http_request = HTTPRequest.new();
+	add_child(http_request);
+	http_request.timeout = TIMEOUT
+	var err = http_request.request(url, ["Content-Type: application/json"], method, json_text)
 	
 	if err != OK:
 		PopUpManager.remove_pop_up();
@@ -20,7 +20,7 @@ func request_json(url: String, method: HTTPClient.Method, data = null) -> Dictio
 	
 	PopUpManager.show_pop_up_loading()
 	
-	var on_request_completed_param = await http.request_completed;
+	var on_request_completed_param = await http_request.request_completed;
 	
 	PopUpManager.remove_pop_up();
 	
