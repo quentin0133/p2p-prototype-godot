@@ -8,9 +8,15 @@ var peers_data := {};
 var lobby: Lobby;
 var ICE_SERVERS := {
 	"iceServers": [
-		{ "urls": ["stun:stun.l.google.com:19302"] }
+		{"urls": "stun:stun.l.google.com:19302"},
+		{"urls": "stun:stun1.l.google.com:19302"},
+		{"urls": "stun:stun2.l.google.com:19302"},
+		{"urls": "stun:stun3.l.google.com:19302"},
+		{"urls": "stun:stun4.l.google.com:19302"},
 	]
 }
+
+var timeout_ice_candidate = 8.0;
 
 func _ready() -> void:
 	set_process(false);
@@ -31,6 +37,7 @@ func host_game(lobby: Lobby):
 	rtc_peer.create_server();
 	multiplayer.multiplayer_peer = rtc_peer;
 	
+	rtc_peer.peer_connected.connect(_on_peer_connected);
 	rtc_peer.peer_disconnected.connect(_on_peer_disconnected);
 	LobbyWebSocket.update_lobby.connect(on_update_lobbies);
 
@@ -62,7 +69,7 @@ func handle_incoming_join_request(player_id: String, lobby_id: String, connectio
 		return;
 	
 	print("connection_info.id : ", connection_info.id);
-	print("type connection_info.id : ", type_string(connection_info.id));
+	print("type connection_info.id : ", typeof(connection_info.id));
 	
 	var err_peer = rtc_peer.add_peer(peer, connection_info.id);
 	if err_peer != OK:
@@ -87,13 +94,18 @@ func handle_incoming_join_request(player_id: String, lobby_id: String, connectio
 		print("Error generating offer : ", error);
 	
 	var start_time := Time.get_ticks_msec();
-	while peer.get_gathering_state() != WebRTCPeerConnection.GatheringState.GATHERING_STATE_COMPLETE:
+	while peers_data.has(player_id) && peer.get_gathering_state() != WebRTCPeerConnection.GatheringState.GATHERING_STATE_COMPLETE:
 		await get_tree().process_frame;
 		var elapsed_time = Time.get_ticks_msec() - start_time;
-		if elapsed_time > 5000:
+		if elapsed_time > timeout_ice_candidate:
+			if (peers_data[player_id].ice_candidates.size() > 0):
+				break;
 			print("Timeout ICE gathering Host : ", lobby.host_player.id);
 			error_occurred.emit(lobby_id);
 			return;
+	
+	if (!peers_data.has(player_id)):
+		return;
 	
 	await get_tree().process_frame;
 	
@@ -119,7 +131,7 @@ func handle_incoming_answer(player_id: String, lobby_id: String, connection_info
 		return;
 	
 	if (peers_data[player_id].last_answer_sdp == answer):
-		print("Same SDP for ", player_id);
+		print("Same SDP received for ", player_id);
 		error_occurred.emit(lobby_id);
 		return;
 	
@@ -138,8 +150,6 @@ func handle_incoming_answer(player_id: String, lobby_id: String, connection_info
 			ice.sdp_mline_index,
 			ice.candidate
 		);
-	
-	LobbyWebSocket.established_connection(player_id, lobby.id);
 
 func offer_created(type: String, sdp: String, player_id: String):
 	if type != "offer":
@@ -148,6 +158,8 @@ func offer_created(type: String, sdp: String, player_id: String):
 	if sdp == null || sdp == "":
 		print("SDP empty for : ", player_id);
 		return;
+	
+	peers_data[player_id].peer.set_local_description(type, sdp)
 	
 	peers_data[player_id].peer.session_description_created.disconnect(
 		peers_data[player_id].session_description_created_callback
@@ -161,14 +173,20 @@ func ice_candidate_created(sdp_mid: String, index: int, candidate: String, playe
 	peers_data[player_id].ice_candidates.append(IceCandidate.new(candidate, sdp_mid, index));
 	print("ICE candidate from host : ", candidate);
 
+func _on_peer_connected(peer_id: int):
+	for player_id in lobby.connections.keys():
+		var peer_connection: PeerConnectionInfo = lobby.connections[player_id];
+		if (peer_connection.id == peer_id):
+			print("Connection established HOST")
+			LobbyWebSocket.established_connection(player_id, lobby.id);
+
 func _on_peer_disconnected(peer_id: int):
 	print("Peer disconnected");
 	GameManager.remove_player_data(peer_id);
 
 func _process(_delta):
 	for player_id  in peers_data.keys():
-		var peer: WebRTCPeerConnection = peers_data[player_id].peer;
-		peer.poll();
+		peers_data[player_id].peer.poll();
 
 func clear_peer_connection(player_id: String):
 	var peer_data: PeerData = peers_data[player_id];

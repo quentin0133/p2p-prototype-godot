@@ -35,8 +35,15 @@ func request_json(url: String, method: HTTPClient.Method, data = null, show_load
 	if response_code < 200 || response_code > 300:
 		return {"error": response_code, "message": "HTTP error %d" % response_code}
 	
-	var json_result = JSON.parse_string(body)
-	if !json_result:
-		return {"error": response_code, "message": "JSON parse error"}
+	if body.strip_edges().is_empty():
+		return {"error": response_code, "data": null}
 	
-	return {"error": response_code, "data": json_result}
+	var json := JSON.new()
+	var parse_err := json.parse(body)
+	if parse_err != OK:
+		return {
+			"error": response_code,
+			"message": "JSON parse error: %s" % json.get_error_message()
+		}
+	
+	return {"error": response_code, "data": json.get_data()}

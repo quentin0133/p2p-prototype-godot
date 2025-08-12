@@ -300,7 +300,10 @@ func submit():
 			_:
 				PopUpManager.show_pop_up(\"Error\", \"An error has occurred, please try again\", \"Ok\");
 		return;
-	client_manager.join_game(Lobby.from_dict(response.data), player);
+	var lobby = Lobby.from_dict(response.data);
+	client_manager.join_game(lobby, player);
+	print(lobby.id)
+	await LobbyWebSocket.broadcast_lobby(lobby.id, lobby.host_player.id);
 	submit_lobby.emit();
 "
 

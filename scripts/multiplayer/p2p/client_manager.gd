@@ -11,11 +11,16 @@ var current_lobby: Lobby;
 var player: Player;
 var ICE_SERVERS := {
 	"iceServers": [
-		{ "urls": ["stun:stun.l.google.com:19302"] }
+		{"urls": "stun:stun.l.google.com:19302"},
+		{"urls": "stun:stun1.l.google.com:19302"},
+		{"urls": "stun:stun2.l.google.com:19302"},
+		{"urls": "stun:stun3.l.google.com:19302"},
+		{"urls": "stun:stun4.l.google.com:19302"},
 	]
 }
 
 var timeout = 5.0;
+var timeout_ice_candidate = 8.0;
 var counter_timeout = 0.0;
 
 func _ready() -> void:
@@ -38,7 +43,6 @@ func join_game(lobby: Lobby, player: Player):
 	LobbyWebSocket.update_lobby.connect(on_update_lobbies);
 
 func on_update_lobbies(lobby: Lobby):
-	print("A")
 	if (!LobbyUtils.has_player_in(LobbyWebSocket.websocket_user_id, lobby)):
 		return;
 	
@@ -86,6 +90,12 @@ func handle_offer():
 		error_occurred.emit(current_lobby.id);
 		return;
 	
+	var err = connected_peer.set_remote_description("offer", offer);
+	if err != OK:
+		print("Error set_remote_description (offer) : ", err);
+		error_occurred.emit(current_lobby.id);
+		return;
+	
 	var ice_candidates_host := connection_info.ice_candidates_host;
 	for ice in ice_candidates_host:
 		connected_peer.add_ice_candidate(
@@ -94,24 +104,25 @@ func handle_offer():
 			ice.candidate
 		);
 	
-	var err = connected_peer.set_remote_description("offer", offer);
-	if err != OK:
-		print("Error set_remote_description (offer) : ", err);
-		error_occurred.emit(current_lobby.id);
-		return;
-	
 	var start_time := Time.get_ticks_msec();
-	while connected_peer.get_gathering_state() != WebRTCPeerConnection.GatheringState.GATHERING_STATE_COMPLETE:
+	while connected_peer != null && connected_peer.get_gathering_state() != WebRTCPeerConnection.GatheringState.GATHERING_STATE_COMPLETE:
+		counter_timeout = 0;
 		await get_tree().process_frame;
-		var elapsed_time = Time.get_ticks_msec() - start_time;
-		if elapsed_time > 5000:
+		var elapsed_time = (Time.get_ticks_msec() - start_time) / 1000.0;
+		if elapsed_time > timeout_ice_candidate:
+			if (ice_candidates.size() > 0):
+				break;
 			print("Timeout ICE gathering Client : ", id);
 			error_occurred.emit(current_lobby.id);
 			return;
 	
+	if (connected_peer == null):
+		return;
+	
 	# wait for the last ice candidate
 	await get_tree().process_frame;
 	
+	connected_peer.get_connection_state()
 	connected_peer.ice_candidate_created.disconnect(ice_candidate_created);
 	
 	print("Client ice candidate gathering completed")
@@ -125,6 +136,7 @@ func answer_created(type: String, sdp: String, player_id: String):
 	if sdp == null || sdp == "":
 		print("SDP empty for : ", player_id);
 		return;
+	connected_peer.set_local_description(type, sdp)
 	connected_peer.session_description_created.disconnect(answer_signal_callback);
 	LobbyWebSocket.sdp_put(player_id, current_lobby.id, sdp, "answer")
 

@@ -78,7 +78,7 @@ func instantiate_lobby()-> LobbyItemUI:
 func get_lobby_by_id(lobby_id: String):
 	var index = lobby_instances.find_custom(
 		func(lobby_instance):
-			return lobby_instance.current_lobby.id == lobby_id && is_instance_valid(lobby_instance);
+			return is_instance_valid(lobby_instance) && lobby_instance.current_lobby.id == lobby_id;
 	);
 	if (index != -1):
 		return lobby_instances[index];
