@@ -15,7 +15,7 @@ var ICE_SERVERS := {
 	]
 }
 
-var timeout = 5.0;
+var timeout = 10.0;
 var counter_timeout = 0.0;
 
 func _ready() -> void:
@@ -57,22 +57,22 @@ func handle_offer():
 	
 	rtc_peer.peer_connected.connect(_on_peer_connected);
 	
-	var peer := WebRTCPeerConnection.new()
-	var err_init := peer.initialize(ICE_SERVERS)
+	var peer := WebRTCPeerConnection.new();
+	var err_init := peer.initialize(ICE_SERVERS);
 	if err_init != OK:
-		print("Error init peer in client: ", err_init)
+		print("Error init peer in client: ", err_init);
 		error_occurred.emit(current_lobby.id);
 		return;
 	
 	connected_peer = peer;
 	
-	var err_peer = rtc_peer.add_peer(connected_peer, 1)
+	var err_peer = rtc_peer.add_peer(connected_peer, 1);
 	if err_peer != OK:
-		print("Failed to add peer: ", err_peer)
+		print("Failed to add peer: ", err_peer);
 		error_occurred.emit(current_lobby.id);
 		return;
 	else:
-		print("Peer successfully added")
+		print("Peer successfully added");
 	
 	# Connecte les signaux utiles
 	answer_signal_callback = answer_created.bind(id);
@@ -81,7 +81,13 @@ func handle_offer():
 	
 	var offer := connection_info.offer;
 	if offer == null:
-		print("No offers received from host")
+		print("No offers received from host");
+		error_occurred.emit(current_lobby.id);
+		return;
+	
+	var err = connected_peer.set_remote_description("offer", offer);
+	if err != OK:
+		print("Error set_remote_description (offer) : ", err);
 		error_occurred.emit(current_lobby.id);
 		return;
 	
@@ -92,12 +98,6 @@ func handle_offer():
 			ice.sdp_mline_index,
 			ice.candidate
 		);
-	
-	var err = connected_peer.set_remote_description("offer", offer);
-	if err != OK:
-		print("Error set_remote_description (offer) : ", err);
-		error_occurred.emit(current_lobby.id);
-		return;
 	
 	var start_time := Time.get_ticks_msec();
 	while connected_peer.get_gathering_state() != WebRTCPeerConnection.GatheringState.GATHERING_STATE_COMPLETE:
@@ -132,7 +132,7 @@ func ice_candidate_created(sdp_mid: String, index: int, candidate: String):
 	print("ICE candidate from host : ", candidate);
 
 func _on_peer_connected(peer_id: int):
-	print("Peer connected !");
+	print("Connection completed !");
 	set_process(false);
 	GameManager.players[peer_id] = player;
 	GameManager.add_player_data.rpc_id(peer_id, Player.to_dict(player));
@@ -143,6 +143,7 @@ func _on_peer_connected(peer_id: int):
 	LobbyWebSocket.update_lobby.disconnect(on_update_lobbies);
 
 func _on_peer_disconnected(peer_id: int):
+	print("Peer disconnected ! : ", peer_id);
 	if (peer_id != 1):
 		return;
 	quit_lobby();
@@ -156,14 +157,16 @@ func _process(delta: float) -> void:
 		set_process(false);
 
 func quit_lobby():
+	print("Client manager quit lobby")
 	if (LobbyWebSocket.update_lobby.is_connected(on_update_lobbies)):
 		LobbyWebSocket.update_lobby.disconnect(on_update_lobbies);
-	if (connected_peer.ice_candidate_created.is_connected(ice_candidate_created)):
-		connected_peer.ice_candidate_created.disconnect(ice_candidate_created);
-	if (connected_peer.session_description_created.is_connected(answer_signal_callback)):
-		connected_peer.session_description_created.disconnect(answer_signal_callback);
-	connected_peer.close();
-	connected_peer = null;
+	if (connected_peer != null):
+		if (connected_peer.ice_candidate_created.is_connected(ice_candidate_created)):
+			connected_peer.ice_candidate_created.disconnect(ice_candidate_created);
+		if (connected_peer.session_description_created.is_connected(answer_signal_callback)):
+			connected_peer.session_description_created.disconnect(answer_signal_callback);
+		connected_peer.close();
+		connected_peer = null;
 	if (rtc_peer.peer_connected.is_connected(_on_peer_connected)):
 		rtc_peer.peer_connected.disconnect(_on_peer_connected);
 	if (rtc_peer):

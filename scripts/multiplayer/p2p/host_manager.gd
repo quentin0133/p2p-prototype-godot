@@ -62,7 +62,7 @@ func handle_incoming_join_request(player_id: String, lobby_id: String, connectio
 		return;
 	
 	print("connection_info.id : ", connection_info.id);
-	print("type connection_info.id : ", type_string(connection_info.id));
+	print("type connection_info.id : ", typeof(connection_info.id));
 	
 	var err_peer = rtc_peer.add_peer(peer, connection_info.id);
 	if err_peer != OK:
@@ -182,6 +182,7 @@ func clear_peer_connection(player_id: String):
 	peers_data.erase(player_id);
 
 func quit_lobby():
+	print("Host manager quit lobby")
 	if (LobbyWebSocket.update_lobby.is_connected(on_update_lobbies)):
 		LobbyWebSocket.update_lobby.disconnect(on_update_lobbies);
 	if (rtc_peer.peer_disconnected.is_connected(_on_peer_disconnected)):
