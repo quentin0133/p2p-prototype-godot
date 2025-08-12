@@ -12,7 +12,7 @@ var ICE_SERVERS := {
 	]
 }
 
-var ice_candidate_timeout = 6.0;
+var ice_candidate_timeout = 8.0;
 
 func _ready() -> void:
 	set_process(false);
@@ -33,6 +33,7 @@ func host_game(lobby: Lobby):
 	rtc_peer.create_server();
 	multiplayer.multiplayer_peer = rtc_peer;
 	
+	rtc_peer.peer_connected.connect(_on_peer_connected);
 	rtc_peer.peer_disconnected.connect(_on_peer_disconnected);
 	LobbyWebSocket.update_lobby.connect(on_update_lobbies);
 
@@ -145,8 +146,6 @@ func handle_incoming_answer(player_id: String, lobby_id: String, connection_info
 			ice.sdp_mline_index,
 			ice.candidate
 		);
-	
-	LobbyWebSocket.established_connection(player_id, lobby.id);
 
 func offer_created(type: String, sdp: String, player_id: String):
 	if type != "offer":
@@ -172,6 +171,13 @@ func offer_created(type: String, sdp: String, player_id: String):
 func ice_candidate_created(sdp_mid: String, index: int, candidate: String, player_id: String):
 	peers_data[player_id].ice_candidates.append(IceCandidate.new(candidate, sdp_mid, index));
 	print("ICE candidate from host : ", candidate);
+
+func _on_peer_connected(peer_id: int):
+	for player_id in lobby.connections.keys():
+		var peer_connection: PeerConnectionInfo = lobby.connections[player_id];
+		if (peer_connection.id == peer_id):
+			print("Connection established HOST")
+			LobbyWebSocket.established_connection(player_id, lobby.id);
 
 func _on_peer_disconnected(peer_id: int):
 	print("Peer disconnected");

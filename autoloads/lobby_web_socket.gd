@@ -149,7 +149,16 @@ func join_lobby_post(lobby_id: String, player: Player, pwd: String):
 		"pwd": pwd
 	}
 	
-	return await http.request_json(HTTP_URL + "/join-lobby", HTTPClient.Method.METHOD_POST, data);
+	return await http.request_json(HTTP_URL + "/join-lobby", HTTPClient.Method.METHOD_POST, data, false);
+
+func broadcast_lobby(lobby_id: String, to_id: String):
+	var data := {
+		"lobby_id": lobby_id,
+		"from_id": websocket_user_id,
+		"to_id": to_id
+	}
+	
+	return await http.request_json(HTTP_URL + "/broadcast-lobby", HTTPClient.Method.METHOD_POST, data, false);
 
 func quit_lobby_post(lobby_id: String, player_id: String = websocket_user_id):
 	var data := {
@@ -157,7 +166,7 @@ func quit_lobby_post(lobby_id: String, player_id: String = websocket_user_id):
 		"lobby_id": lobby_id
 	}
 	
-	return await http.request_json(HTTP_URL + "/quit-lobby", HTTPClient.Method.METHOD_POST, data);
+	return await http.request_json(HTTP_URL + "/quit-lobby", HTTPClient.Method.METHOD_POST, data, false);
 
 func sdp_put(player_id: String, lobby_id: String, sdp: String, type: String):
 	var data := {
@@ -167,7 +176,7 @@ func sdp_put(player_id: String, lobby_id: String, sdp: String, type: String):
 		"type": type
 	}
 	
-	await http.request_json(HTTP_URL + "/send-sdp", HTTPClient.Method.METHOD_PUT, data);
+	await http.request_json(HTTP_URL + "/send-sdp", HTTPClient.Method.METHOD_PUT, data, false);
 
 func ice_candidate_put(player_id: String, lobby_id: String, ice_candidates: Array, is_host: bool):
 	var ice_candidates_serialized = [];
@@ -185,7 +194,7 @@ func ice_candidate_put(player_id: String, lobby_id: String, ice_candidates: Arra
 		"is_host": is_host
 	}
 	
-	return await http.request_json(HTTP_URL + "/send-ice-candidates", HTTPClient.Method.METHOD_PUT, data);
+	return await http.request_json(HTTP_URL + "/send-ice-candidates", HTTPClient.Method.METHOD_PUT, data, false);
 
 func established_connection(player_id, lobby_id):
 	var data := {
@@ -193,4 +202,4 @@ func established_connection(player_id, lobby_id):
 		"lobby_id": lobby_id
 	};
 	
-	return await http.request_json(HTTP_URL + "/connection-established", HTTPClient.Method.METHOD_PUT, data);
+	return await http.request_json(HTTP_URL + "/connection-established", HTTPClient.Method.METHOD_PUT, data, false);

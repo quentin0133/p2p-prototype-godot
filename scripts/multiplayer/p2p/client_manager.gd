@@ -16,8 +16,8 @@ var ICE_SERVERS := {
 	]
 }
 
-var timeout = 30.0;
-var ice_candidate_timeout = 10.0;
+var timeout = 5.0;
+var ice_candidate_timeout = 8.0;
 var counter_timeout = 0.0;
 
 func _ready() -> void:
@@ -102,6 +102,7 @@ func handle_offer():
 	
 	var start_time := Time.get_ticks_msec();
 	while connected_peer != null && connected_peer.get_gathering_state() != WebRTCPeerConnection.GatheringState.GATHERING_STATE_COMPLETE:
+		counter_timeout = 0.0;
 		await get_tree().process_frame;
 		var elapsed_time = (Time.get_ticks_msec() - start_time) / 1000.0;
 		if elapsed_time > ice_candidate_timeout:
@@ -121,7 +122,7 @@ func handle_offer():
 	
 	print("Client ice candidate gathering completed")
 	
-	await LobbyWebSocket.ice_candidate_put(LobbyWebSocket.websocket_user_id, current_lobby.id, ice_candidates, false);
+	LobbyWebSocket.ice_candidate_put(LobbyWebSocket.websocket_user_id, current_lobby.id, ice_candidates, false);
 
 func answer_created(type: String, sdp: String, player_id: String):
 	if type != "answer":
