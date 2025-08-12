@@ -12,6 +12,8 @@ var ICE_SERVERS := {
 	]
 }
 
+var ice_candidate_timeout = 6.0;
+
 func _ready() -> void:
 	set_process(false);
 
@@ -87,13 +89,18 @@ func handle_incoming_join_request(player_id: String, lobby_id: String, connectio
 		print("Error generating offer : ", error);
 	
 	var start_time := Time.get_ticks_msec();
-	while peer.get_gathering_state() != WebRTCPeerConnection.GatheringState.GATHERING_STATE_COMPLETE:
+	while peers_data.has(player_id) && peers_data[player_id].peer.get_gathering_state() != WebRTCPeerConnection.GatheringState.GATHERING_STATE_COMPLETE:
 		await get_tree().process_frame;
-		var elapsed_time = Time.get_ticks_msec() - start_time;
-		if elapsed_time > 5000:
-			print("Timeout ICE gathering Host : ", lobby.host_player.id);
-			error_occurred.emit(lobby_id);
+		var elapsed_time = (Time.get_ticks_msec() - start_time) / 1000.0;
+		if elapsed_time > ice_candidate_timeout:
+			if (peers_data[player_id].ice_candidates.size() > 0):
+				break;
+			print("Timeout ICE gathering Client and still no ice candidate : ");
+			error_occurred.emit(lobby.id);
 			return;
+	
+	if (!peers_data.has(player_id)):
+		return;
 	
 	await get_tree().process_frame;
 	
@@ -147,6 +154,11 @@ func offer_created(type: String, sdp: String, player_id: String):
 		return;
 	if sdp == null || sdp == "":
 		print("SDP empty for : ", player_id);
+		return;
+	
+	var err = peers_data[player_id].peer.set_local_description(type, sdp);
+	if err != OK:
+		print("Failed to set local description: ", err);
 		return;
 	
 	peers_data[player_id].peer.session_description_created.disconnect(

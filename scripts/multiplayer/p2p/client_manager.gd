@@ -11,11 +11,13 @@ var current_lobby: Lobby;
 var player: Player;
 var ICE_SERVERS := {
 	"iceServers": [
-		{ "urls": ["stun:stun.l.google.com:19302"] }
+		{"urls": "stun:stun.l.google.com:19302"},
+		{"urls": "stun:stun1.l.google.com:19302"},
 	]
 }
 
-var timeout = 10.0;
+var timeout = 30.0;
+var ice_candidate_timeout = 10.0;
 var counter_timeout = 0.0;
 
 func _ready() -> void:
@@ -34,6 +36,7 @@ func join_game(lobby: Lobby, player: Player):
 	rtc_peer = WebRTCMultiplayerPeer.new();
 	rtc_peer.create_client(current_lobby.connections[LobbyWebSocket.websocket_user_id].id)
 	multiplayer.multiplayer_peer = rtc_peer;
+	rtc_peer.peer_connected.connect(_on_peer_connected);
 	
 	LobbyWebSocket.update_lobby.connect(on_update_lobbies);
 
@@ -55,8 +58,6 @@ func handle_offer():
 	if (connection_info.state != "offer"):
 		return;
 	
-	rtc_peer.peer_connected.connect(_on_peer_connected);
-	
 	var peer := WebRTCPeerConnection.new();
 	var err_init := peer.initialize(ICE_SERVERS);
 	if err_init != OK:
@@ -66,6 +67,11 @@ func handle_offer():
 	
 	connected_peer = peer;
 	
+	# Connecte les signaux utiles
+	answer_signal_callback = answer_created.bind(id);
+	connected_peer.ice_candidate_created.connect(ice_candidate_created);
+	connected_peer.session_description_created.connect(answer_signal_callback);
+	
 	var err_peer = rtc_peer.add_peer(connected_peer, 1);
 	if err_peer != OK:
 		print("Failed to add peer: ", err_peer);
@@ -73,11 +79,6 @@ func handle_offer():
 		return;
 	else:
 		print("Peer successfully added");
-	
-	# Connecte les signaux utiles
-	answer_signal_callback = answer_created.bind(id);
-	connected_peer.ice_candidate_created.connect(ice_candidate_created);
-	connected_peer.session_description_created.connect(answer_signal_callback);
 	
 	var offer := connection_info.offer;
 	if offer == null:
@@ -100,13 +101,18 @@ func handle_offer():
 		);
 	
 	var start_time := Time.get_ticks_msec();
-	while connected_peer.get_gathering_state() != WebRTCPeerConnection.GatheringState.GATHERING_STATE_COMPLETE:
+	while connected_peer != null && connected_peer.get_gathering_state() != WebRTCPeerConnection.GatheringState.GATHERING_STATE_COMPLETE:
 		await get_tree().process_frame;
-		var elapsed_time = Time.get_ticks_msec() - start_time;
-		if elapsed_time > 5000:
-			print("Timeout ICE gathering Client : ", id);
+		var elapsed_time = (Time.get_ticks_msec() - start_time) / 1000.0;
+		if elapsed_time > ice_candidate_timeout:
+			if (ice_candidates.size() > 0):
+				break;
+			print("Timeout ICE gathering Client and still no ice candidate : ");
 			error_occurred.emit(current_lobby.id);
 			return;
+	
+	if (connected_peer == null):
+		return;
 	
 	# wait for the last ice candidate
 	await get_tree().process_frame;
@@ -124,12 +130,19 @@ func answer_created(type: String, sdp: String, player_id: String):
 	if sdp == null || sdp == "":
 		print("SDP empty for : ", player_id);
 		return;
+
+	var err = connected_peer.set_local_description(type, sdp)
+	if err != OK:
+		print("Failed to set local description: ", err)
+		error_occurred.emit(current_lobby.id)
+		return
+
 	connected_peer.session_description_created.disconnect(answer_signal_callback);
 	LobbyWebSocket.sdp_put(player_id, current_lobby.id, sdp, "answer")
 
 func ice_candidate_created(sdp_mid: String, index: int, candidate: String):
 	ice_candidates.append(IceCandidate.new(candidate, sdp_mid, index))
-	print("ICE candidate from host : ", candidate);
+	print("ICE candidate from client : ", candidate);
 
 func _on_peer_connected(peer_id: int):
 	print("Connection completed !");
