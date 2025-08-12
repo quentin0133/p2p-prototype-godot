@@ -20,7 +20,7 @@ func _exit_tree() -> void:
 		LobbyWebSocket.update_lobby.disconnect(on_update_lobbies);
 
 func host_game(lobby: Lobby):
-	rtc_peer = WebRTCMultiplayerPeer.new();	
+	rtc_peer = WebRTCMultiplayerPeer.new();
 	
 	self.lobby = lobby;
 	
