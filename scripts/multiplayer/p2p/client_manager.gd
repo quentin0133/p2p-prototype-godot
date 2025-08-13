@@ -16,11 +16,16 @@ var ICE_SERVERS := {
 		{"urls": "stun:stun2.l.google.com:19302"},
 		{"urls": "stun:stun3.l.google.com:19302"},
 		{"urls": "stun:stun4.l.google.com:19302"},
+		{
+			"urls": 'turn:stun.cloudflare.com:3478',
+			"username": '7a3c2cb4852413e8165119521f37ba97d43b3aadbdaa112786800ce4da709db1515ffc983b934d29d8d4c2c6a6cea24f78b5d8132979eb6b65e7860e5e1ea8a3',
+			"credential": 'aba9b169546eb6dcc7bfb1cdf34544cf95b5161d602e3b5fa7c8342b2e9802fb='
+		},
 	]
 }
 
-var timeout = 5.0;
-var timeout_ice_candidate = 8.0;
+var timeout = 30.0;
+var timeout_ice_candidate = 16.0;
 var counter_timeout = 0.0;
 
 func _ready() -> void:
