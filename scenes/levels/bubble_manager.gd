@@ -7,7 +7,8 @@ const margin = Vector2(10, 10);
 
 var camera: Camera2D;
 var players: Array[PlayerInstance];
-var tracked_player = []
+var tracked_player = [];
+var tracked_bubbles = [];
 
 func _on_level_players_ready(players: Array[PlayerInstance]) -> void:
 	self.players = players;
@@ -58,6 +59,9 @@ func _on_chat_on_message_sended(peer_id: int, message: String) -> void:
 
 func process_track_position(peer_id: int, player: PlayerInstance):
 	tracked_player.append(peer_id);
+	var highest_z_index = get_highest_z_index(tracked_bubbles);
+	player.dialogue_container.z_index = highest_z_index + 1;
+	tracked_bubbles.append(player.dialogue_container);
 	
 	while (!player.is_dialoguing):
 		await get_tree().process_frame;
@@ -67,3 +71,9 @@ func process_track_position(peer_id: int, player: PlayerInstance):
 		await get_tree().process_frame;
 	
 	tracked_player.erase(peer_id);
+
+func get_highest_z_index(bubbles: Array[BubbleChat]):
+	if (bubbles.size() == 0):
+		return 0;
+	
+	return bubbles.map(func(bubble): return bubble.z_index).max();

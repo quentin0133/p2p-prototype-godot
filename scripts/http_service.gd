@@ -45,5 +45,5 @@ func request_json(url: String, method: HTTPClient.Method, data = null, show_load
 			"error": response_code,
 			"message": "JSON parse error: %s" % json.get_error_message()
 		}
-	
+
 	return {"error": response_code, "data": json.get_data()}

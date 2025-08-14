@@ -97,5 +97,5 @@ size_flags_vertical = 8
 theme = SubResource("Theme_eogo8")
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 script = ExtResource("4_aqi8x")
-max_expand_x = 200.0
+max_expand_x = 350.0
 container = NodePath("..")

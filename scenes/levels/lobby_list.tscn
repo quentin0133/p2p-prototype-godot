@@ -302,8 +302,7 @@ func submit():
 		return;
 	var lobby = Lobby.from_dict(response.data);
 	client_manager.join_game(lobby, player);
-	print(lobby.id)
-	await LobbyWebSocket.broadcast_lobby(lobby.id, lobby.host_player.id);
+	LobbyWebSocket.broadcast_lobby(lobby.id, lobby.host_player.id);
 	submit_lobby.emit();
 "
 

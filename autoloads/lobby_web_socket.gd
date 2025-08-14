@@ -11,7 +11,7 @@ const WS_URL = "wss://p2p-prototype-api-production.up.railway.app";
 const HTTP_URL = "https://p2p-prototype-api-production.up.railway.app/lobbies";
 
 var socket := WebSocketPeer.new();
-var http := HttpService.new()
+var http := HttpService.new();
 var websocket_user_id: String;
 var current_lobbies_version: int;
 
@@ -166,7 +166,7 @@ func quit_lobby_post(lobby_id: String, player_id: String = websocket_user_id):
 		"lobby_id": lobby_id
 	}
 	
-	return await http.request_json(HTTP_URL + "/quit-lobby", HTTPClient.Method.METHOD_POST, data);
+	return await http.request_json(HTTP_URL + "/quit-lobby", HTTPClient.Method.METHOD_POST, data, false);
 
 func sdp_put(player_id: String, lobby_id: String, sdp: String, type: String):
 	var data := {

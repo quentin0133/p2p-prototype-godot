@@ -73,9 +73,6 @@ func handle_incoming_join_request(player_id: String, lobby_id: String, connectio
 		print("Failed to add peer because peer already added");
 		return;
 	
-	print("connection_info.id : ", connection_info.id);
-	print("type connection_info.id : ", typeof(connection_info.id));
-	
 	var err_peer = rtc_peer.add_peer(peer, connection_info.id);
 	if err_peer != OK:
 		print("Failed to add peer: ", err_peer);
@@ -108,10 +105,10 @@ func handle_incoming_join_request(player_id: String, lobby_id: String, connectio
 			print("Timeout ICE gathering Host : ", lobby.host_player.id);
 			error_occurred.emit(lobby_id);
 			return;
-	
+
 	if (!peers_data.has(player_id)):
 		return;
-	
+
 	await get_tree().process_frame;
 	
 	peer.ice_candidate_created.disconnect(peers_data[player_id].ice_candidates_callback);
@@ -163,9 +160,14 @@ func offer_created(type: String, sdp: String, player_id: String):
 	if sdp == null || sdp == "":
 		print("SDP empty for : ", player_id);
 		return;
-	
+
+	var err = peers_data[player_id].peer.set_local_description(type, sdp);
+	if err != OK:
+		print("Failed to set local description: ", err);
+		return;
+
 	peers_data[player_id].peer.set_local_description(type, sdp)
-	
+
 	peers_data[player_id].peer.session_description_created.disconnect(
 		peers_data[player_id].session_description_created_callback
 	);
@@ -205,6 +207,7 @@ func clear_peer_connection(player_id: String):
 	peers_data.erase(player_id);
 
 func quit_lobby():
+	print("Host manager quit lobby")
 	if (LobbyWebSocket.update_lobby.is_connected(on_update_lobbies)):
 		LobbyWebSocket.update_lobby.disconnect(on_update_lobbies);
 	if (rtc_peer.peer_disconnected.is_connected(_on_peer_disconnected)):
