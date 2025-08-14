@@ -21,7 +21,7 @@ var ICE_SERVERS := {
 	]
 }
 
-var timeout_ice_candidate = 16.0;
+var timeout_ice_candidate = 8.0;
 
 func _ready() -> void:
 	set_process(false);
