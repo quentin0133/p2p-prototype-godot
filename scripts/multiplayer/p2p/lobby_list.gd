@@ -65,6 +65,7 @@ func remove_lobby(lobby_id: String):
 		lobby_deleted.queue_free();
 
 func update_lobby(lobby: Lobby):
+	if (lobby == null): return;
 	var lobby_updated: LobbyItemUI = get_lobby_by_id(lobby.id);
 	if (lobby_updated != null):
 		lobby_updated.init(lobby);

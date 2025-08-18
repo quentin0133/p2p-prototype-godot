@@ -9,26 +9,21 @@ var answer_signal_callback;
 var ice_candidates: Array[IceCandidate] = [];
 var current_lobby: Lobby;
 var player: Player;
-var ICE_SERVERS := {
-	"iceServers": [
-		{"urls": "stun:stun.l.google.com:19302"},
-		{"urls": "stun:stun1.l.google.com:19302"},
-		{"urls": "stun:stun2.l.google.com:19302"},
-		{"urls": "stun:stun3.l.google.com:19302"},
-		{"urls": "stun:stun4.l.google.com:19302"},
-		{
-			"urls": 'turn:stun.cloudflare.com:3478',
-			"username": '7a3c2cb4852413e8165119521f37ba97d43b3aadbdaa112786800ce4da709db1515ffc983b934d29d8d4c2c6a6cea24f78b5d8132979eb6b65e7860e5e1ea8a3',
-			"credential": 'aba9b169546eb6dcc7bfb1cdf34544cf95b5161d602e3b5fa7c8342b2e9802fb='
-		},
-	]
-}
+var ice_servers;
 
-var timeout = 5.0;
-var timeout_ice_candidate = 8.0;
+var timeout = 10.0;
+var timeout_ice_candidate = 5.0;
 var counter_timeout = 0.0;
+var start_time_ice_candidate: float;
+
+var http_service: HttpService = HttpService.new();
 
 func _ready() -> void:
+	add_child(http_service);
+	var resp = await http_service.request_json("https://p2p-prototype.metered.live/api/v1/turn/credentials?apiKey=eb34063bf6b8b15f2a2d889770708586e2a1", HTTPClient.METHOD_GET);
+	ice_servers = {
+		"iceServers": resp.data
+	}
 	set_process(false);
 
 func _exit_tree() -> void:
@@ -47,6 +42,7 @@ func join_game(lobby: Lobby, player: Player):
 	rtc_peer.peer_connected.connect(_on_peer_connected);
 
 	LobbyWebSocket.update_lobby.connect(on_update_lobbies);
+	LobbyWebSocket.broadcast_lobby(lobby.id, lobby.host_player.id);
 
 func on_update_lobbies(lobby: Lobby):
 	if (!LobbyUtils.has_player_in(LobbyWebSocket.websocket_user_id, lobby)):
@@ -67,7 +63,7 @@ func handle_offer():
 		return;
 	
 	var peer := WebRTCPeerConnection.new();
-	var err_init := peer.initialize(ICE_SERVERS);
+	var err_init := peer.initialize(ice_servers);
 	if err_init != OK:
 		print("Error init peer in client: ", err_init);
 		error_occurred.emit(current_lobby.id);
@@ -108,11 +104,11 @@ func handle_offer():
 			ice.candidate
 		);
 
-	var start_time := Time.get_ticks_msec();
+	start_time_ice_candidate = Time.get_ticks_msec();
 	while connected_peer != null && connected_peer.get_gathering_state() != WebRTCPeerConnection.GatheringState.GATHERING_STATE_COMPLETE:
 		counter_timeout = 0.0;
 		await get_tree().process_frame;
-		var elapsed_time = (Time.get_ticks_msec() - start_time) / 1000.0;
+		var elapsed_time = (Time.get_ticks_msec() - start_time_ice_candidate) / 1000.0;
 		if elapsed_time > timeout_ice_candidate:
 			if (ice_candidates.size() > 0):
 				break;
@@ -150,6 +146,7 @@ func answer_created(type: String, sdp: String, player_id: String):
 	LobbyWebSocket.sdp_put(player_id, current_lobby.id, sdp, "answer")
 
 func ice_candidate_created(sdp_mid: String, index: int, candidate: String):
+	start_time_ice_candidate = Time.get_ticks_msec();
 	ice_candidates.append(IceCandidate.new(candidate, sdp_mid, index))
 	print("ICE candidate from client : ", candidate);
 
@@ -171,6 +168,8 @@ func _on_peer_disconnected(peer_id: int):
 	quit_lobby();
 
 func _process(delta: float) -> void:
+	if (rtc_peer != null):
+		rtc_peer.poll();
 	if connected_peer != null:
 		connected_peer.poll();
 	counter_timeout += delta;

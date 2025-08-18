@@ -12,18 +12,20 @@
 resource_name = "level_manager"
 script/source = "extends Node2D
 
-signal players_ready(players: Array[PlayerInstance]);
+signal players_ready(players: Dictionary);
 
 @export var main_player: PackedScene
 @export var other_player: PackedScene
 
-var players: Array[PlayerInstance] = [];
+var players = {};
+var local_player: PlayerInstance;
 
 func _ready():
 	multiplayer.peer_connected.connect(_on_peer_connected);
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected);
 	
-	spawn_player(main_player, multiplayer.get_unique_id());
+	local_player = spawn_player(main_player, multiplayer.get_unique_id());
+	
 	for peer_id in multiplayer.get_peers():
 		spawn_player(other_player, peer_id);
 	players_ready.emit(players);
@@ -32,7 +34,7 @@ func spawn_player(player_scene: PackedScene, peer_id: int):
 	var player = player_scene.instantiate() as PlayerInstance;
 
 	# Assigner l'autorité (c'est super important !)
-	player.set_multiplayer_authority(peer_id)
+	player.set_multiplayer_authority(peer_id);
 	var username;
 	if (GameManager.players.size() > 0):
 		username = GameManager.players[peer_id].name;
@@ -41,29 +43,39 @@ func spawn_player(player_scene: PackedScene, peer_id: int):
 	
 	player.username_label.text = username;
 	
+	if (multiplayer.get_unique_id() != peer_id):
+		player_instantiate.rpc_id(peer_id);
+	
 	# Position de spawn random pour éviter les overlaps
 	player.global_position = Vector2.ZERO;
 	
 	player.name = \"Player_%d\" % peer_id;
-	players.append(player);
+	players[peer_id] = player;
 	
-	add_child(player)
+	add_child(player);
+	return player;
 
 func _on_peer_connected(id):
-	print(\"Peer connected: \", id)
+	print(\"Peer connected: \", id);
 	spawn_player(other_player, id);
 
 func _on_peer_disconnected(id):
-	print(\"Peer disconnected: \", id)
-	for player in players:
-		if player.get_multiplayer_authority() == id:
-			player.queue_free()
-			GameManager.players.erase(id)
-	print(\"Players remaining : \", GameManager.players)
+	print(\"Peer disconnected: \", id);
+	players[id].queue_free();
+	local_player.players_id.erase(id);
+	GameManager.players.erase(id);
+	var i = multiplayer.get_peers().find(id);
+	multiplayer.get_peers().slice(i, i + 1);
+	print(\"Players remaining : \", GameManager.players);
 
 func _on_canvas_layer_on_message_sended(peer_id: int, message: String) -> void:
-	var player_instance = players.filter(func(p: PlayerInstance): return p.get_multiplayer_authority() == peer_id)[0];
-	player_instance.broadcast_message(message);
+	if (players.has(peer_id)):
+		players[peer_id].broadcast_message(message);
+
+@rpc(\"any_peer\", \"reliable\")
+func player_instantiate():
+	var sender_id = multiplayer.get_remote_sender_id();
+	local_player.players_id.append(sender_id);
 "
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_b2cq8"]

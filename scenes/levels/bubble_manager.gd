@@ -6,14 +6,14 @@ const margin = Vector2(10, 10);
 @export var offset: Vector2;
 
 var camera: Camera2D;
-var players: Array[PlayerInstance];
-var tracked_player = [];
-var tracked_bubbles = [];
+var current_players := {};
+var tracked_player: Array[int] = [];
+var tracked_bubbles: Array[BubbleChat] = [];
 
-func _on_level_players_ready(players: Array[PlayerInstance]) -> void:
-	self.players = players;
+func _on_level_players_ready(players: Dictionary) -> void:
+	current_players = players;
 	camera = get_viewport().get_camera_2d();
-	for player in players:
+	for player in players.values():
 		var bubble_chat = bubble_chat_scene.instantiate() as BubbleChat;
 		add_child(bubble_chat);
 		bubble_chat.visible = false;
@@ -52,10 +52,10 @@ func track_dialogue_position_player(player: PlayerInstance):
 	
 	bubble.global_position = clamped_target_point
 
-func _on_chat_on_message_sended(peer_id: int, message: String) -> void:
-	for player in players:
-		if (player.get_multiplayer_authority() == peer_id && !tracked_player.has(peer_id)):
-			process_track_position(peer_id, player);
+func _on_chat_on_message_sended(peer_id: int, _message: String) -> void:
+	print(current_players);
+	if (current_players.has(peer_id) && !tracked_player.has(peer_id)):
+			process_track_position(peer_id, current_players[peer_id]);
 
 func process_track_position(peer_id: int, player: PlayerInstance):
 	tracked_player.append(peer_id);
@@ -72,7 +72,7 @@ func process_track_position(peer_id: int, player: PlayerInstance):
 	
 	tracked_player.erase(peer_id);
 
-func get_highest_z_index(bubbles: Array[BubbleChat]):
+func get_highest_z_index(bubbles: Array):
 	if (bubbles.size() == 0):
 		return 0;
 	

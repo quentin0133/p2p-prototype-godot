@@ -8,7 +8,6 @@ const INTERPOLATION_SPEED := 10.0
 
 @export var username_label: Label;
 
-@onready var is_local_player: bool = multiplayer.get_unique_id() == get_multiplayer_authority();
 @onready var dialogue_sfx: AudioStreamPlayer2D = $DialogueSFX
 
 var target_position: Vector2
@@ -17,9 +16,10 @@ var is_dialoguing = false;
 var dialogue_container: Control;
 var dialogue_label: LabelEnhanced;
 var current_message = null;
+var players_id = [];
 
 func _physics_process(delta: float) -> void:
-	if (!is_local_player):
+	if (!is_multiplayer_authority()):
 		global_position = global_position.lerp(target_position, INTERPOLATION_SPEED * delta);
 		return;
 	
@@ -32,10 +32,11 @@ func _physics_process(delta: float) -> void:
 	velocity = direction * SPEED * delta;
 	move_and_slide();
 	
-	rpc("update_position", global_position)
+	for player_id in players_id:
+		update_position.rpc_id(player_id, global_position);
 
 func broadcast_message(message: String):
-	var split_message = await get_text_chunks(dialogue_label, dialogue_label.max_expand_x, message, 5);
+	var split_message = get_text_chunks(dialogue_label, dialogue_label.max_expand_x, message, 5);
 	dialogue_container.visible = true;
 	messages.append_array(split_message);
 	if (!is_dialoguing):
@@ -84,5 +85,5 @@ func get_text_chunks(label: Label, label_size: float, full_text: String, max_lin
 
 @rpc("any_peer", "unreliable")
 func update_position(new_pos: Vector2) -> void:
-	if (!is_local_player):
+	if (!is_multiplayer_authority()):
 		target_position = new_pos

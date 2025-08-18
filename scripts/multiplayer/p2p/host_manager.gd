@@ -6,24 +6,19 @@ signal error_occurred(lobby_id: String);
 var rtc_peer: WebRTCMultiplayerPeer;
 var peers_data := {};
 var lobby: Lobby;
-var ICE_SERVERS := {
-	"iceServers": [
-		{"urls": "stun:stun.l.google.com:19302"},
-		{"urls": "stun:stun1.l.google.com:19302"},
-		{"urls": "stun:stun2.l.google.com:19302"},
-		{"urls": "stun:stun3.l.google.com:19302"},
-		{"urls": "stun:stun4.l.google.com:19302"},
-		{
-			"urls": 'turn:stun.cloudflare.com:3478',
-			"username": '7a3c2cb4852413e8165119521f37ba97d43b3aadbdaa112786800ce4da709db1515ffc983b934d29d8d4c2c6a6cea24f78b5d8132979eb6b65e7860e5e1ea8a3',
-			"credential": 'aba9b169546eb6dcc7bfb1cdf34544cf95b5161d602e3b5fa7c8342b2e9802fb='
-		},
-	]
-}
+var ice_servers;
 
-var timeout_ice_candidate = 8.0;
+var timeout_ice_candidate = 5.0;
+var start_time_ice_candidate: float;
+
+var http_service: HttpService = HttpService.new();
 
 func _ready() -> void:
+	add_child(http_service);
+	var resp = await http_service.request_json("https://p2p-prototype.metered.live/api/v1/turn/credentials?apiKey=eb34063bf6b8b15f2a2d889770708586e2a1", HTTPClient.METHOD_GET);
+	ice_servers = {
+		"iceServers": resp.data
+	}
 	set_process(false);
 
 func _exit_tree() -> void:
@@ -64,7 +59,7 @@ func on_update_lobbies(lobby: Lobby):
 
 func handle_incoming_join_request(player_id: String, lobby_id: String, connection_info: PeerConnectionInfo):
 	var peer := WebRTCPeerConnection.new();
-	var err_init := peer.initialize(ICE_SERVERS);
+	var err_init := peer.initialize(ice_servers);
 	if err_init != OK:
 		print("Error WebRTC init for ", player_id);
 		return;
@@ -95,10 +90,10 @@ func handle_incoming_join_request(player_id: String, lobby_id: String, connectio
 	if (error != OK):
 		print("Error generating offer : ", error);
 	
-	var start_time := Time.get_ticks_msec();
+	start_time_ice_candidate = Time.get_ticks_msec();
 	while peers_data.has(player_id) && peer.get_gathering_state() != WebRTCPeerConnection.GatheringState.GATHERING_STATE_COMPLETE:
 		await get_tree().process_frame;
-		var elapsed_time = Time.get_ticks_msec() - start_time;
+		var elapsed_time = (Time.get_ticks_msec() - start_time_ice_candidate) / 1000.0;
 		if elapsed_time > timeout_ice_candidate:
 			if (peers_data[player_id].ice_candidates.size() > 0):
 				break;
@@ -166,8 +161,6 @@ func offer_created(type: String, sdp: String, player_id: String):
 		print("Failed to set local description: ", err);
 		return;
 
-	peers_data[player_id].peer.set_local_description(type, sdp)
-
 	peers_data[player_id].peer.session_description_created.disconnect(
 		peers_data[player_id].session_description_created_callback
 	);
@@ -177,6 +170,7 @@ func offer_created(type: String, sdp: String, player_id: String):
 	LobbyWebSocket.sdp_put(player_id, lobby.id, sdp, "offer");
 
 func ice_candidate_created(sdp_mid: String, index: int, candidate: String, player_id: String):
+	start_time_ice_candidate = Time.get_ticks_msec();
 	peers_data[player_id].ice_candidates.append(IceCandidate.new(candidate, sdp_mid, index));
 	print("ICE candidate from host : ", candidate);
 
@@ -192,6 +186,8 @@ func _on_peer_disconnected(peer_id: int):
 	GameManager.remove_player_data(peer_id);
 
 func _process(_delta):
+	if (rtc_peer != null):
+		rtc_peer.poll();
 	for player_id  in peers_data.keys():
 		peers_data[player_id].peer.poll();
 

@@ -4,7 +4,7 @@ var players := {};
 
 func _process(delta):
 	if multiplayer.multiplayer_peer:
-		multiplayer.multiplayer_peer.poll()
+		multiplayer.multiplayer_peer.poll();
 
 @rpc("any_peer", "reliable")
 func add_player_data(player_data: Dictionary):
@@ -28,5 +28,5 @@ func sync_all_players(player_datas: Dictionary):
 
 func launch_game():
 	LobbyWebSocket.disconnect_socket();
-	print("Game starting, switching scene...")
-	get_tree().change_scene_to_file("res://scenes/levels/level.tscn")
+	print("Game starting, switching scene...");
+	get_tree().change_scene_to_file("res://scenes/levels/level.tscn");

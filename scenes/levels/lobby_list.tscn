@@ -18,15 +18,19 @@ script/source = "extends ColorRect
 @export var client_manager: ClientManager;
 @export var host_manager: HostManager;
 
-@onready var show_lobby_id_btn: Button = $Background/VBoxContainer/Control/HBoxContainer/ShowBtn
-@onready var lobby_id_label: Label = $Background/VBoxContainer/Control/HBoxContainer/LobbyId
-@onready var players_container = $Background/VBoxContainer/Control/ScrollContainer/VBoxContainer
+@onready var pwd_container: Control = $Background/VBoxContainer/MarginContainer/Control/Pwd
+@onready var show_lobby_id_btn: Button = $Background/VBoxContainer/MarginContainer/Control/LobbyId/ShowBtn
+@onready var lobby_id_label: Label = $Background/VBoxContainer/MarginContainer/Control/LobbyId/LobbyId
+@onready var show_pwd_btn: Button = $Background/VBoxContainer/MarginContainer/Control/Pwd/ShowBtn
+@onready var pwd_label: Label = $Background/VBoxContainer/MarginContainer/Control/Pwd/Pwd
+@onready var players_container = $Background/VBoxContainer/MarginContainer/Control/ScrollContainer/VBoxContainer
 @onready var start_lobby_button: Button = $Background/VBoxContainer/HBoxContainer/StartGameBtn
 
 var current_nb_players = 0;
 var players_UI: Array[PlayerItemUI];
 var current_lobby: Lobby;
 var hidden_lobby_id = true;
+var hidden_pwd = true;
 
 func _ready() -> void:
 	LobbyWebSocket.add_lobby.connect(add_lobby);
@@ -47,14 +51,18 @@ func add_lobby(lobby: Lobby):
 	
 	#print(\"Add lobbies event in Lobby\");
 	
-	LobbyWebSocket.add_lobby.disconnect(add_lobby);
-	LobbyWebSocket.remove_lobby.connect(remove_lobby);
+	if (LobbyWebSocket.add_lobby.is_connected(add_lobby)):
+		LobbyWebSocket.add_lobby.disconnect(add_lobby);
+	if (!LobbyWebSocket.remove_lobby.is_connected(remove_lobby)):
+		LobbyWebSocket.remove_lobby.connect(remove_lobby);
 	
 	show_lobby(lobby);
 	update_lobby_instances();
 	update_players();
 
 func update_lobby(lobby: Lobby):
+	if (current_lobby != null && current_lobby.id != lobby.id):
+		return;
 	if (!LobbyUtils.is_player_in_lobby(LobbyWebSocket.websocket_user_id, lobby)):
 		if (current_lobby != null):
 			hide_lobby();
@@ -62,8 +70,9 @@ func update_lobby(lobby: Lobby):
 	
 	#print(\"Update lobbies event in Lobby\")
 	
-	if (current_lobby == null):
+	if (LobbyWebSocket.add_lobby.is_connected(add_lobby)):
 		LobbyWebSocket.add_lobby.disconnect(add_lobby);
+	if (!LobbyWebSocket.remove_lobby.is_connected(remove_lobby)):
 		LobbyWebSocket.remove_lobby.connect(remove_lobby);
 	
 	show_lobby(lobby);
@@ -79,8 +88,10 @@ func remove_lobby(lobby_id: String):
 	
 	#print(\"Remove lobbies event in Lobby\")
 	
-	LobbyWebSocket.add_lobby.connect(add_lobby);
-	LobbyWebSocket.remove_lobby.disconnect(remove_lobby);
+	if (!LobbyWebSocket.add_lobby.is_connected(add_lobby)):
+		LobbyWebSocket.add_lobby.connect(add_lobby);
+	if (LobbyWebSocket.remove_lobby.is_connected(remove_lobby)):
+		LobbyWebSocket.remove_lobby.disconnect(remove_lobby);
 	
 	hide_lobby();
 	
@@ -131,7 +142,7 @@ func instantiate_player_UI():
 	return player_item_instance;
 
 func remove_player(player_id: String):
-	var index_player = players_UI.find(func(player_UI): player_UI.id == player_id);
+	var index_player = players_UI.find_custom(func(player_UI): player_UI.id == player_id);
 	if (index_player == -1):
 		return;
 	
@@ -143,18 +154,31 @@ func remove_player(player_id: String):
 
 func show_lobby(lobby: Lobby):
 	current_lobby = lobby;
-	set_lobby_id();
+	set_visibility_lobby_id();
+	set_visibility_pwd();
 	visible = true;
+	pwd_container.visible = lobby.pwd != \"\";
+	hidden_lobby_id = true;
+	hidden_pwd = true;
 	start_lobby_button.visible = lobby.host_player.id == LobbyWebSocket.websocket_user_id;
 
-func set_lobby_id():
+func set_visibility_lobby_id():
 	if (current_lobby == null): return;
 	if (hidden_lobby_id):
-		show_lobby_id_btn.text = \"Afficher\";
-		lobby_id_label.text = \"******\";
+		show_lobby_id_btn.text = \"Show\";
+		lobby_id_label.text = \"*\".repeat(len(current_lobby.id));
 	else:
-		show_lobby_id_btn.text = \"Cacher\";
+		show_lobby_id_btn.text = \"Hide\";
 		lobby_id_label.text = current_lobby.id;
+
+func set_visibility_pwd():
+	if (current_lobby == null || current_lobby.pwd == \"\"): return;
+	if (hidden_pwd):
+		show_pwd_btn.text = \"Show\";
+		pwd_label.text = \"*\".repeat(len(current_lobby.pwd));
+	else:
+		show_pwd_btn.text = \"Hide\";
+		pwd_label.text = current_lobby.pwd;
 
 func hide_lobby():
 	visible = false;
@@ -168,12 +192,21 @@ func start_lobby() -> void:
 	GameManager.sync_all_players.rpc(player_datas);
 	GameManager.launch_game();
 
-func _on_show_btn_pressed() -> void:
+func _on_show_lobby_id_btn_pressed() -> void:
 	hidden_lobby_id = !hidden_lobby_id;
-	set_lobby_id();
+	set_visibility_lobby_id();
 
-func _on_copy_btn_pressed() -> void:
-	DisplayServer.clipboard_set(current_lobby.id);
+func _on_show_pwd_btn_pressed() -> void:
+	hidden_pwd = !hidden_pwd;
+	set_visibility_pwd();
+
+func _on_copy_lobby_id_btn_pressed() -> void:
+	if OS.get_name() != \"HTML5\":
+		DisplayServer.clipboard_set(current_lobby.id);
+
+func _on_copy_pwd_btn_pressed() -> void:
+	if OS.get_name() != \"HTML5\":
+		DisplayServer.clipboard_set(current_lobby.pwd);
 "
 
 [sub_resource type="GDScript" id="GDScript_6xt5d"]
@@ -228,7 +261,7 @@ func submit():
 	host_manager.host_game(Lobby.from_dict(resp.data));
 	submit_host.emit();
 
-func _on_max_player_text_edit_text_changed(new_text: String) -> void:
+func _on_max_player_text_edit_text_changed(_new_text: String) -> void:
 	if (!max_player.text.is_valid_int()):
 		max_player.text = \"\";
 		return;
@@ -241,8 +274,8 @@ func _on_max_player_text_edit_text_changed(new_text: String) -> void:
 	else:
 		max_player.text = str(min(MAX_PLAYER, max_player_int));
 	
-	var len = caret;
-	max_player.caret_column = len;
+	var length = caret;
+	max_player.caret_column = length;
 "
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_g64qr"]
@@ -263,12 +296,12 @@ const MAX_USERNAME_LENGTH = 18;
 @onready var lobby_id_container = $Background/MarginContainer/VBoxContainer/IdLobby
 @onready var pwd_container = $Background/MarginContainer/VBoxContainer/Pwd
 
-var lobby_id;
+var current_lobby_id;
 
 func show_form(lobby_id: String, is_pwd: bool):
 	lobby_id_container.visible = lobby_id == \"\";
 	lobby_id_line_edit.text = lobby_id;
-	self.lobby_id = lobby_id;
+	current_lobby_id = lobby_id;
 	pwd_container.visible = is_pwd;
 	reset_form();
 	visible = true;
@@ -289,8 +322,8 @@ func submit():
 		return;
 	var player = Player.new(LobbyWebSocket.websocket_user_id, username.text);
 	if (lobby_id_container.visible):
-		lobby_id = lobby_id_line_edit.text;
-	var response = await LobbyWebSocket.join_lobby_post(lobby_id, player, pwd.text);
+		current_lobby_id = lobby_id_line_edit.text;
+	var response = await LobbyWebSocket.join_lobby_post(current_lobby_id, player, pwd.text);
 	if response.error != 200:
 		match response.error:
 			404:
@@ -302,7 +335,6 @@ func submit():
 		return;
 	var lobby = Lobby.from_dict(response.data);
 	client_manager.join_game(lobby, player);
-	LobbyWebSocket.broadcast_lobby(lobby.id, lobby.host_player.id);
 	submit_lobby.emit();
 "
 
@@ -464,59 +496,79 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Control" type="Control" parent="Lobby/Background/VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="Lobby/Background/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 15
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 10
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Lobby/Background/VBoxContainer/Control"]
-layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_left = 43.0
-offset_top = 17.9997
-offset_right = -43.0
-offset_bottom = 45.9997
-grow_horizontal = 2
+[node name="Control" type="VBoxContainer" parent="Lobby/Background/VBoxContainer/MarginContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="LobbyId" type="HBoxContainer" parent="Lobby/Background/VBoxContainer/MarginContainer/Control"]
+layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Label" type="Label" parent="Lobby/Background/VBoxContainer/Control/HBoxContainer"]
+[node name="Label" type="Label" parent="Lobby/Background/VBoxContainer/MarginContainer/Control/LobbyId"]
 layout_mode = 2
-text = "Id du lobby :"
+text = "Lobby id :"
 
-[node name="LobbyId" type="Label" parent="Lobby/Background/VBoxContainer/Control/HBoxContainer"]
+[node name="LobbyId" type="Label" parent="Lobby/Background/VBoxContainer/MarginContainer/Control/LobbyId"]
 layout_mode = 2
 text = "******"
 
-[node name="ShowBtn" type="Button" parent="Lobby/Background/VBoxContainer/Control/HBoxContainer"]
+[node name="ShowBtn" type="Button" parent="Lobby/Background/VBoxContainer/MarginContainer/Control/LobbyId"]
 custom_minimum_size = Vector2(25, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
-text = "Afficher"
+text = "Show"
 
-[node name="CopyBtn" type="Button" parent="Lobby/Background/VBoxContainer/Control/HBoxContainer"]
+[node name="CopyBtn" type="Button" parent="Lobby/Background/VBoxContainer/MarginContainer/Control/LobbyId"]
 custom_minimum_size = Vector2(25, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
-text = "Copier"
+text = "Copy"
 
-[node name="ScrollContainer" type="ScrollContainer" parent="Lobby/Background/VBoxContainer/Control"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 25.0
-offset_top = 58.0
-offset_right = -25.0
-offset_bottom = -8.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="Pwd" type="HBoxContainer" parent="Lobby/Background/VBoxContainer/MarginContainer/Control"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Label" type="Label" parent="Lobby/Background/VBoxContainer/MarginContainer/Control/Pwd"]
+layout_mode = 2
+text = "Password :"
+
+[node name="Pwd" type="Label" parent="Lobby/Background/VBoxContainer/MarginContainer/Control/Pwd"]
+layout_mode = 2
+text = "******"
+
+[node name="ShowBtn" type="Button" parent="Lobby/Background/VBoxContainer/MarginContainer/Control/Pwd"]
+custom_minimum_size = Vector2(25, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Show"
+
+[node name="CopyBtn" type="Button" parent="Lobby/Background/VBoxContainer/MarginContainer/Control/Pwd"]
+custom_minimum_size = Vector2(25, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Copy"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Lobby/Background/VBoxContainer/MarginContainer/Control"]
+layout_mode = 2
+size_flags_vertical = 3
 horizontal_scroll_mode = 0
 scroll_deadzone = 5
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Lobby/Background/VBoxContainer/Control/ScrollContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Lobby/Background/VBoxContainer/MarginContainer/Control/ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 10
 metadata/_edit_use_anchors_ = true
 
@@ -755,8 +807,10 @@ script = ExtResource("5_2edry")
 [connection signal="want_join_lobby" from="LobbyList" to="FormClient" method="show_form"]
 [connection signal="pressed" from="LobbyList/Group/VBoxContainer/HBoxContainer/CreateLobby" to="FormHost" method="set_visible" binds= [true]]
 [connection signal="pressed" from="LobbyList/Group/VBoxContainer/HBoxContainer/JoinLobby" to="FormClient" method="show_form" binds= ["", true]]
-[connection signal="pressed" from="Lobby/Background/VBoxContainer/Control/HBoxContainer/ShowBtn" to="Lobby" method="_on_show_btn_pressed"]
-[connection signal="pressed" from="Lobby/Background/VBoxContainer/Control/HBoxContainer/CopyBtn" to="Lobby" method="_on_copy_btn_pressed"]
+[connection signal="pressed" from="Lobby/Background/VBoxContainer/MarginContainer/Control/LobbyId/ShowBtn" to="Lobby" method="_on_show_lobby_id_btn_pressed"]
+[connection signal="pressed" from="Lobby/Background/VBoxContainer/MarginContainer/Control/LobbyId/CopyBtn" to="Lobby" method="_on_copy_lobby_id_btn_pressed"]
+[connection signal="pressed" from="Lobby/Background/VBoxContainer/MarginContainer/Control/Pwd/ShowBtn" to="Lobby" method="_on_show_pwd_btn_pressed"]
+[connection signal="pressed" from="Lobby/Background/VBoxContainer/MarginContainer/Control/Pwd/CopyBtn" to="Lobby" method="_on_copy_pwd_btn_pressed"]
 [connection signal="pressed" from="Lobby/Background/VBoxContainer/HBoxContainer/StartGameBtn" to="Lobby" method="start_lobby"]
 [connection signal="pressed" from="Lobby/Background/VBoxContainer/HBoxContainer/QuitBtn" to="Lobby" method="quit_lobby"]
 [connection signal="submit_host" from="FormHost" to="FormHost" method="set_visible" binds= [false]]

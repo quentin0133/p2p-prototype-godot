@@ -1,7 +1,6 @@
 class_name TransitionUtils;
 
 static func fade_time(valueA: float, valueB: float, time: float, callback: Callable):
-	var counter := 0.0;
 	var elapsed := 0.0;
 	var prev_time := Time.get_ticks_msec() / 1000.0;
 	var current_value = valueA;
